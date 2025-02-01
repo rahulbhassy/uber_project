@@ -14,7 +14,7 @@ spark = SparkSession.builder \
     .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
     .config("spark.driver.extraJavaOptions", "-Dlog4j.configuration=file:log4j.properties") \
     .getOrCreate()
-#important step - dummy message
+#dummy message
 # Set the logging level to OFF
 spark.sparkContext.setLogLevel("OFF")
 
