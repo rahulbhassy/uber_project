@@ -45,4 +45,3 @@ def enrichUberData():
 
 uberData = enrichUberData()
 uberData.show()
-uberData.count().show()

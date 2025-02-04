@@ -40,7 +40,6 @@ def fetch_weather(date, lat, lon):
 # Function to enrich Uber data with weather data
 def enrich_with_weather(uberData):
     # Ensure date is parsed correctly in uberData
-    uberData = uberData.withColumn("date", to_date("pickup_datetime", "yyyy-MM-dd"))
 
     # Get distinct dates
     dates = uberData.select("date").distinct().collect()
