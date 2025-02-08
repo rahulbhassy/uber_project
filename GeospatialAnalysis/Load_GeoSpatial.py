@@ -2,7 +2,6 @@ from pyspark.sql.types import StructType, StructField, StringType, ArrayType, Do
 from pyspark.sql.functions import explode, col, to_json
 from config.spark_config import create_spark_session_sedona
 from GeospatialAnalysis.GeoJsonValidator import fix_geometry_pandas  # Ensure this is imported correctly
-from GeospatialAnalysis.LoadTable import LoadTable
 import os
 
 # Set the PYSPARK_PYTHON environment variable

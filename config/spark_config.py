@@ -10,7 +10,7 @@ def create_spark_session():
 
     # Initialize the Spark session
     spark = SparkSession.builder \
-        .appName("UberETL") \
+        .appName("ML") \
         .config("spark.jars",
                 "file:///C:/Spark/spark-3.4.4-bin-hadoop3/jars/delta-core_2.12-2.4.0.jar,"
                 "file:///C:/Users/HP/uber_project/config/mysql-connector-j-8.0.33.jar"
