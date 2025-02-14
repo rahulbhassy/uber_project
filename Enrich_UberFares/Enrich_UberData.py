@@ -20,7 +20,7 @@ def enrichWeather():
         .mode("overwrite") \
         .save("C:/Users/HP/uber_project/Data/Enriched_Weather_uberData/uberData.csv")
 
-    return enriched_uberData
+    return enriched_uberData,spark
 
 def enrichDistance(uberData):
     haversine_udf = udf(haversine,DoubleType())
@@ -37,11 +37,22 @@ def enrichDistance(uberData):
 
     return uberData
 
-def enrichUberData():
-    uberData = enrichWeather()
+def enrichClean_Write(uberData):
+    filterData = uberData.filter(uberData.avg_temp.isNotNull() & uberData.precipitation.isNotNull())
+
+    filterData.write \
+        .format("delta") \
+        .mode("overwrite") \
+        .save("C:/Users/HP/uber_project/Data/Enriched/UberFares.csv")
+
+    return filterData
+
+def main():
+    uberData,spark = enrichWeather()
     enriched_UberData = enrichDistance(uberData)
+    enrichData = enrichClean_Write(enriched_UberData)
+    spark.stop()
+    return enrichData
 
-    return enriched_UberData
-
-uberData = enrichUberData()
-uberData.show()
+if __name__ == "__main__":
+    main()

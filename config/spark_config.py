@@ -57,8 +57,8 @@ def create_spark_session_sedona():
     spark = SparkSession.builder \
         .appName("UberETL") \
         .master("local[*]") \
-        .config("spark.driver.memory", "2g") \
-        .config("spark.executor.memory", "2g") \
+        .config("spark.driver.memory", "4g") \
+        .config("spark.executor.memory", "4g") \
         .config("spark.jars",
                 "file:///C:/Spark/spark-3.4.4-bin-hadoop3/jars/delta-core_2.12-2.4.0.jar,"
                 "file:///C:/Users/HP/uber_project/config/mysql-connector-j-8.0.33.jar,"
