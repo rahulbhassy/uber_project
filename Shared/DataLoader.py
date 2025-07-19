@@ -48,4 +48,10 @@ class DataLoader:
                     .load()
             )
 
+        if self.filetype == 'geojson':
+            reader = spark.read.option("multiline","true")
+            if self.schema:
+                reader = reader.schema(self.schema)
+            return reader.json(self.path)
+
         raise ValueError(f"Unsupported filetype '{self.filetype}'")

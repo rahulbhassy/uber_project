@@ -1,7 +1,7 @@
 from Shared.sparkconfig import create_spark_session
 from Shared.pyspark_env import setEnv
 from Shared.DataLoader import DataLoader
-from Shared.FileIO import filetype,filepath
+from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
 from Schema import WeatherSchema
 from Harmonization import WeatherAPI
@@ -12,13 +12,13 @@ sourcedefinition = "uberfares"
 weatherschema = WeatherSchema()
 
 
-fileitem = filepath(
-    process="readraw",
+readio = DataLakeIO(
+    process='readraw',
     sourceobject=sourcedefinition,
     state='current'
 )
 dataloader = DataLoader(
-    path=fileitem,
+    path=readio.filepath(),
     filetype='delta'
 )
 rawdata = dataloader.LoadData(spark)
@@ -28,14 +28,14 @@ enriched_weather_data = enrichweather.enrich(
     data=rawdata,
     spark=spark
 )
-fileitem = filepath(
+currentio = DataLakeIO(
     process="enrichweather",
     sourceobject=sourcedefinition,
     state='current'
 )
 datawriter = DataWriter(
     mode='overwrite',
-    path=fileitem
+    path=currentio.filepath()
 )
 datawriter.WriteData(df=enriched_weather_data)
 spark.stop()
