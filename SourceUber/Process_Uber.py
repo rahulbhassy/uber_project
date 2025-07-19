@@ -1,29 +1,41 @@
 from Shared.pyspark_env import setEnv
 from Shared.sparkconfig import create_spark_session
-from MetadataConfig import sourceschema,filepath,filetype
-from DataLoader import DataLoader
-from DataWriter import DataWriter
+from Schema import sourceschema
+from Shared.DataLoader import DataLoader
+from Shared.DataWriter import DataWriter
+from Shared.FileIO import filepath,filetype
 from DataCleaner import DataCleaner
 
 setEnv()
 spark = create_spark_session()
-sourcedefinition = "uberfares"
-sourceschema = sourceschema(sourcedefinition=sourcedefinition)
+sourceobject = "uberfares"
+sourceschema = sourceschema(sourcedefinition=sourceobject)
 
 dataloader = DataLoader(
-    path=filepath(process="load"),
+    path=filepath(
+        process="load",
+        sourceobject=sourceobject
+    ),
     schema=sourceschema,
-    filetype=filetype(sourcedefinition=sourcedefinition)
+    filetype=filetype(process='load',sourceobject=sourceobject)
 )
 source_data = dataloader.LoadData(spark)
 
 datacleaner = DataCleaner(
-    sourcedefinition=sourcedefinition
+    sourcedefinition=sourceobject
 )
 destination_data = datacleaner.cleandata(sourcedata=source_data)
-
+fileitem = filepath(
+    process="write",
+    sourceobject=sourceobject,
+    state="current"
+)
 datawriter = DataWriter(
     mode="overwrite",
-    path=filepath("write")
+    path=fileitem,
+    format="delta"
 )
-datawriter.WriteData(df=destination_data)
+datawriter.WriteData(
+    df=destination_data
+)
+spark.stop()

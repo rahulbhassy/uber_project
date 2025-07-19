@@ -1,31 +1,32 @@
-
 from Shared.sparkconfig import create_spark_session
 from Shared.pyspark_env import setEnv
-from Shared.FileIO import filetype,filepath
 from Shared.DataLoader import DataLoader
+from Shared.FileIO import filetype,filepath
 from Shared.DataWriter import DataWriter
-from EnrichUber.Harmonization import Distance
-from EnrichUber.Schema import WeatherSchema
+from Harmonization import Distance
 
 setEnv()
-spark= create_spark_session()
+spark = create_spark_session()
+sourcedefinition = "uberfares"
+
 
 fileitem = filepath(
     process="enrichweather",
-    sourceobject='uberfares',
+    sourceobject=sourcedefinition,
     state='current'
 )
-print(fileitem)
 dataloader = DataLoader(
     path=fileitem,
     filetype='delta'
 )
 enriched_weather_data = dataloader.LoadData(spark)
+
+
 enrichdistance = Distance()
 enriched_data = enrichdistance.enrich(data=enriched_weather_data)
 fileitem= filepath(
     process="enrich",
-    sourceobject='uberfares',
+    sourceobject=sourcedefinition,
     state='current'
 )
 datawriter = DataWriter(
