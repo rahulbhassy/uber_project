@@ -84,7 +84,7 @@ class DataLakeIO:
         # 1) Raw load
         if self._process_lower == "load":
             if self._sourceobject_lower == "uberfares":
-                return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), "UberFaresData", "uber.csv")
+                return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), "UberFaresData", "uberfares.csv")
             elif self._sourceobject_lower and self._sourceobject_lower.endswith(".geojson"):
                 parts = ["Input", "Borough", "NewYork", self._sourceobject_lower]
                 return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), *parts)

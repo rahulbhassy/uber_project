@@ -8,6 +8,7 @@ from Harmonization import Distance
 setEnv()
 spark = create_spark_session()
 sourcedefinition = "uberfares"
+loadtype = 'full'
 
 readio = DataLakeIO(
     process="enrichweather",
@@ -20,7 +21,6 @@ dataloader = DataLoader(
 )
 enriched_weather_data = dataloader.LoadData(spark)
 
-
 enrichdistance = Distance()
 enriched_data = enrichdistance.enrich(data=enriched_weather_data)
 currentio = DataLakeIO(
@@ -29,8 +29,9 @@ currentio = DataLakeIO(
     state='current'
 )
 datawriter = DataWriter(
-    mode='overwrite',
-    path=currentio.filepath()
+    loadtype='full',
+    path=currentio.filepath(),
+    spark=spark
 )
 datawriter.WriteData(df=enriched_data)
 

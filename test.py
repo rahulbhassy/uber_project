@@ -1,37 +1,33 @@
-
-from Shared.sparkconfig import create_spark_session
 from Shared.pyspark_env import setEnv
-from Shared.FileIO import filetype,filepath
+from Shared.sparkconfig import create_spark_session
+from SourceUberSatellite.Schema import sourceschema
 from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
-from EnrichUber.Harmonization import Distance
-from EnrichUber.Schema import WeatherSchema
+from Shared.FileIO import DataLakeIO
+from DataCleaner import DataCleaner
 
 setEnv()
-spark= create_spark_session()
+spark = create_spark_session()
+'''
+Fact Tables - uberfares , tripdetails
+'''
+sourceobject = "customerdetails"
+loadtype = "full"
+sourceschema = sourceschema(sourcedefinition=sourceobject)
 
-fileitem = filepath(
-    process="enrichweather",
-    sourceobject='uberfares',
-    state='current'
+loadio = DataLakeIO(
+    process='load',
+    sourceobject=sourceobject,
+    loadtype=loadtype
 )
-print(fileitem)
 dataloader = DataLoader(
-    path=fileitem,
-    filetype='delta'
+    path=loadio.filepath(),
+    schema=sourceschema,
+    filetype=loadio.filetype(),
+    loadtype=loadtype
 )
-enriched_weather_data = dataloader.LoadData(spark)
-enrichdistance = Distance()
-enriched_data = enrichdistance.enrich(data=enriched_weather_data)
-fileitem= filepath(
-    process="enrich",
-    sourceobject='uberfares',
-    state='current'
-)
-datawriter = DataWriter(
-    mode='overwrite',
-    path=fileitem
-)
-datawriter.WriteData(df=enriched_data)
+source_data = dataloader.LoadData(spark)
+print(source_data.count())
 
-spark.stop()
+df = spark.read.format("delta").load("C:/Users/HP/uber_project/Data/Raw/customerdetails/current/customerdetails.delta")
+print(df.count())

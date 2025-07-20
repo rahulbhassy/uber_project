@@ -1,6 +1,8 @@
 from pyspark.sql import DataFrame
+from pyspark.sql import SparkSession
 from connection import JDBC_URL, JDBC_PROPERTIES
-
+from Shared.FileIO import IntermediateIO
+from Shared.DataLoader import DataLoader
 class DataWriter:
     """
     Unified DataWriter supporting configurable write format (default: delta) and JDBC.
@@ -9,10 +11,16 @@ class DataWriter:
     :param path: output path or JDBC table name
     :param format: output format ('delta', 'parquet', or 'jdbc')
     """
-    def __init__(self, mode: str, path: str, format: str = "delta"):
-        self.mode = mode
+    def __init__(self, loadtype: str, path: str , spark: SparkSession,format: str = "delta"):
+        self.loadtype=loadtype
+        self.mode = 'overwrite'
         self.path = path
         self.format = format.lower()
+        self.spark = spark
+
+        if self.loadtype == "delta":
+            self.mode = "append"
+
 
     def WriteData(self, df: DataFrame):
         """
@@ -32,4 +40,19 @@ class DataWriter:
                 .save()
         else:
             # File-based write (Delta, Parquet, CSV, etc.)
+            deltapath=self.WriteParquet(df=df)
+            dataloader = DataLoader(
+                path=deltapath,
+                filetype='parquet'
+            )
+            df = dataloader.LoadData(self.spark)
             df.write.format(self.format).mode(self.mode).save(self.path)
+
+    def WriteParquet(self,df:DataFrame):
+        deltaio = IntermediateIO(
+            fullpath=self.path
+        )
+        deltapath = deltaio.get_deltapath()
+        df.write.format('parquet').mode('overwrite').save(deltapath)
+        return deltapath
+

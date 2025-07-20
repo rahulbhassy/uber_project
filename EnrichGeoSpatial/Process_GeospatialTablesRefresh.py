@@ -10,6 +10,7 @@ spark = create_spark_session_sedona()
 SedonaContext.create(spark)
 sourceobjectuber = 'uberfares'
 sourceobjectborough = 'features'
+loadtype = 'full'
 
 readuberio = DataLakeIO(
     process='readenrich',
@@ -56,9 +57,10 @@ currentio = DataLakeIO(
     state='current'
 )
 datawriter = DataWriter(
-    mode='overwrite',
+    loadtype=loadtype,
     path=currentio.filepath(),
-    format=currentio.filetype()
+    format=currentio.filetype(),
+    spark=spark
 )
 datawriter.WriteData(df=spatial_analysis)
 spark.stop()

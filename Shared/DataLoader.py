@@ -12,10 +12,11 @@ class DataLoader:
       - 'parquet'
       - 'jdbc'
     """
-    def __init__(self, path: str, filetype: str, schema: StructType = None):
+    def __init__(self, path: str, filetype: str, loadtype: str=None, schema: StructType = None):
         self.path = path
         self.schema = schema
         self.filetype = filetype.lower()
+        self.loadtype= loadtype
 
     def LoadData(self, spark: SparkSession):
         """

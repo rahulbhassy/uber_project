@@ -10,7 +10,7 @@ setEnv()
 spark = create_spark_session()
 sourcedefinition = "uberfares"
 weatherschema = WeatherSchema()
-
+loadtype = 'delta'
 
 readio = DataLakeIO(
     process='readraw',
@@ -34,8 +34,9 @@ currentio = DataLakeIO(
     state='current'
 )
 datawriter = DataWriter(
-    mode='overwrite',
-    path=currentio.filepath()
+    loadtype=loadtype,
+    path=currentio.filepath(),
+    spark=spark
 )
 datawriter.WriteData(df=enriched_weather_data)
 spark.stop()
