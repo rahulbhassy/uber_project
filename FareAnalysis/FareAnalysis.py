@@ -42,7 +42,7 @@ def getFareTableData():
         .load()
 
     # Show the DataFrame content.
-    df.show(truncate=False)
+    return df
 
 
 

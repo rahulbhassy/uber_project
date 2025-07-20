@@ -6,7 +6,7 @@ import configparser
 def create_spark_session():
     # Read the configuration file for any Spark settings
     config = configparser.ConfigParser()
-    config.read('config/config.ini')
+    config.read('Shared/config.ini')
 
     # Initialize the Spark session
     spark = SparkSession.builder \
@@ -27,7 +27,7 @@ def create_spark_session():
 def create_spark_session_jdbc():
     # Read the configuration file for any Spark settings
     config = configparser.ConfigParser()
-    config.read('config/config.ini')
+    config.read('Shared/config.ini')
 
     # Initialize the Spark session
     spark = SparkSession.builder \
@@ -51,7 +51,7 @@ def create_spark_session_jdbc():
 def create_spark_session_sedona():
     # Read the configuration file for any Spark settings
     config = configparser.ConfigParser()
-    config.read('config/config.ini')
+    config.read('Shared/config.ini')
 
     # Initialize the Spark session
     spark = SparkSession.builder \

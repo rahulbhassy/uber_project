@@ -1,6 +1,6 @@
 from Shared.pyspark_env import setEnv
 from Shared.sparkconfig import create_spark_session
-from SourceUberSatellite.Schema import sourceschema
+from Schema import sourceschema
 from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
@@ -11,7 +11,7 @@ spark = create_spark_session()
 '''
 Fact Tables - uberfares , tripdetails
 '''
-sourceobject = "customerdetails"
+sourceobject = "tripdetails"
 loadtype = "full"
 sourceschema = sourceschema(sourcedefinition=sourceobject)
 
@@ -27,7 +27,26 @@ dataloader = DataLoader(
     loadtype=loadtype
 )
 source_data = dataloader.LoadData(spark)
-print(source_data.count())
 
-df = spark.read.format("delta").load("C:/Users/HP/uber_project/Data/Raw/customerdetails/current/customerdetails.delta")
-print(df.count())
+datacleaner = DataCleaner(
+    sourcedefinition=sourceobject,
+    spark=spark,
+    loadtype=loadtype
+)
+destination_data = datacleaner.cleandata(sourcedata=source_data)
+
+currentio = DataLakeIO(
+    process="write",
+    sourceobject=sourceobject,
+    state='current'
+)
+datawriter = DataWriter(
+    loadtype=loadtype,
+    path=currentio.filepath(),
+    format="delta",
+    spark=spark
+)
+datawriter.WriteData(
+    df=destination_data
+)
+spark.stop()

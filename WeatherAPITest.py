@@ -66,10 +66,10 @@ with ThreadPoolExecutor(max_workers=10) as executor:
     weather_data = [future.result() for future in futures]
 
 # Print the Python types for the fetched data
+# Print the fetched values
 for wd in weather_data:
-    print(f"Fetched weather for date {wd['date']}:")
-    print(f"  avg_temp type: {type(wd['avg_temp'])}")
-    print(f"  precipitation type: {type(wd['precipitation'])}")
+    print(f"Fetched weather for {wd['date']}: avg_temp = {wd['avg_temp']}, precipitation = {wd['precipitation']}")
+
 
 # ----------------- Creating and Examining a Spark DataFrame -----------------
 
