@@ -12,7 +12,7 @@ spark = create_spark_session()
 Fact Tables - uberfares , tripdetails
 '''
 sourceobject = "tripdetails"
-loadtype = "full"
+loadtype = "delta"
 sourceschema = sourceschema(sourcedefinition=sourceobject)
 
 loadio = DataLakeIO(

@@ -130,9 +130,10 @@ class DataLakeIO:
 
         raise ValueError(f"Unknown process '{self.process}'")
 
-    def deltafilepath(self):
+    def deltafilepath(self,date:str = None):
         intermediateio = IntermediateIO(
-            fullpath=self.filetype()
+            fullpath=self.filepath(),
+            date=date
         )
         return intermediateio.get_deltapath()
 
@@ -143,8 +144,9 @@ class IntermediateIO:
         "customerdetails", "vehicledetails", "uber","features"
     ])
 
-    def __init__(self, fullpath: str):
+    def __init__(self, fullpath: str, date: str = None):
         self.fullpath = Path(fullpath)
+        self.date = date
         # derive sourceobject once
         self.sourceobject = self._derive_sourceobject()
 
@@ -179,6 +181,8 @@ class IntermediateIO:
         """
         ipath        = self._get_intermediate_path()
         today_folder = datetime.now().strftime('%Y-%m-%d')
+        if self.date:
+            today_folder = self.date
         delta_path   = ipath / "delta" / today_folder / f"{self.sourceobject}.parquet"
         return str(delta_path)
 
