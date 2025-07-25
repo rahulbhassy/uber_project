@@ -1,22 +1,35 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType
 from connection import JDBC_URL, JDBC_PROPERTIES
+import time
+
 
 class DataLoader:
     """
-    DataLoader for CSV, Delta, Parquet, and JDBC formats with optional schema support.
+    DataLoader for CSV, Delta, Parquet, JDBC, and GeoJSON formats with optional schema support.
 
-    filetype:
+    filetype options:
       - 'csv'
       - 'delta'
       - 'parquet'
       - 'jdbc'
+      - 'geojson'
     """
-    def __init__(self, path: str, filetype: str, loadtype: str=None, schema: StructType = None):
+
+    def __init__(self, path: str, filetype: str, loadtype: str = None, schema: StructType = None):
         self.path = path
         self.schema = schema
         self.filetype = filetype.lower()
-        self.loadtype= loadtype
+        self.loadtype = loadtype
+
+        print("\n" + "=" * 80)
+        print("DATA LOADER INITIALIZED")
+        print("=" * 80)
+        print(f"📁 Path:       {self.path}")
+        print(f"📝 Format:     {self.filetype.upper()}")
+        print(f"🗂️ Schema:     {'Provided' if self.schema else 'Inferred'}")
+        print(f"⚙️ Load Type:  {self.loadtype if self.loadtype else 'Default'}")
+        print("=" * 80)
 
     def LoadData(self, spark: SparkSession):
         """
@@ -25,34 +38,88 @@ class DataLoader:
         :param spark: SparkSession instance
         :return: DataFrame
         """
-        # CSV
-        if self.filetype == 'csv':
-            reader = spark.read.option("header", True)
-            if self.schema:
-                reader = reader.schema(self.schema)
-            return reader.csv(self.path)
+        start_time = time.time()
+        print(f"\n⏳ Loading {self.filetype.upper()} data from: {self.path}")
 
-        # Delta or Parquet
-        if self.filetype in ('delta', 'parquet'):
-            return spark.read.format(self.filetype).load(self.path)
+        try:
+            # CSV
+            if self.filetype == 'csv':
+                print("🔄 Using CSV loader with options: header=True")
+                reader = spark.read.option("header", True)
+                if self.schema:
+                    print("🔧 Applying custom schema")
+                    reader = reader.schema(self.schema)
+                df = reader.csv(self.path)
 
-        # JDBC
-        if self.filetype == 'jdbc':
-            return (
-                spark.read
+            # Delta or Parquet
+            elif self.filetype in ('delta', 'parquet'):
+                print(f"🔄 Using {self.filetype.upper()} loader")
+                df = spark.read.format(self.filetype).load(self.path)
+
+            # JDBC
+            elif self.filetype == 'jdbc':
+                print("🔄 Using JDBC loader")
+                print(f"  🔗 URL: {JDBC_URL}")
+                print(f"  🧑 User: {JDBC_PROPERTIES['user']}")
+                print(f"  📋 Table: {self.path}")
+
+                df = (
+                    spark.read
                     .format('jdbc')
                     .option('url', JDBC_URL)
                     .option('dbtable', self.path)
                     .option('user', JDBC_PROPERTIES['user'])
-                    .option('password', JDBC_PROPERTIES['password'])
+                    .option('password', '******')  # Mask password
                     .option('driver', JDBC_PROPERTIES['driver'])
                     .load()
-            )
+                )
 
-        if self.filetype == 'geojson':
-            reader = spark.read.option("multiline","true")
-            if self.schema:
-                reader = reader.schema(self.schema)
-            return reader.json(self.path)
+            # GeoJSON
+            elif self.filetype == 'geojson':
+                print("🔄 Using GeoJSON loader with multiline=True")
+                reader = spark.read.option("multiline", "true")
+                if self.schema:
+                    print("🔧 Applying custom schema")
+                    reader = reader.schema(self.schema)
+                df = reader.json(self.path)
 
-        raise ValueError(f"Unsupported filetype '{self.filetype}'")
+            else:
+                raise ValueError(f"Unsupported filetype '{self.filetype}'")
+
+            # Post-load analysis
+            load_time = time.time() - start_time
+            print(f"\n✅ Successfully loaded data in {load_time:.2f} seconds")
+            print(f"📊 Schema Preview:")
+            df.printSchema()
+
+            # Safe row count (avoid OOM for large datasets)
+            try:
+                row_count = df.count()
+                print(f"🧮 Row Count:   {row_count:,}")
+            except Exception as e:
+                print(f"⚠️ Could not count rows: {str(e)[:100]}")
+
+            col_count = len(df.columns)
+            print(f"📦 Column Count: {col_count}")
+
+            # Sample data preview
+            if col_count > 0:
+                print("\n🔍 Data Sample (first 5 rows):")
+                try:
+                    sample = df.limit(5).toPandas()
+                    print(sample.to_string(index=False))
+                except Exception as e:
+                    print(f"⚠️ Could not show sample: {str(e)[:100]}")
+
+            print("=" * 80)
+            return df
+
+        except Exception as e:
+            load_time = time.time() - start_time
+            print("\n" + "=" * 80)
+            print(f"🚨 ERROR LOADING DATA (after {load_time:.2f}s)")
+            print("=" * 80)
+            print(f"Error Type:    {type(e).__name__}")
+            print(f"Error Message: {str(e)[:500]}")
+            print("=" * 80)
+            raise  # Re-raise exception after logging

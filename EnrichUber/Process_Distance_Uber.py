@@ -3,12 +3,12 @@ from Shared.pyspark_env import setEnv
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
-from Harmonization import Distance
+from Harmonization import Distance,PreHarmonizer
 
 setEnv()
 spark = create_spark_session()
 sourcedefinition = "uberfares"
-loadtype = 'full'
+loadtype = 'delta'
 
 readio = DataLakeIO(
     process="enrichweather",
@@ -20,16 +20,28 @@ dataloader = DataLoader(
     filetype='delta'
 )
 enriched_weather_data = dataloader.LoadData(spark)
-
-enrichdistance = Distance()
-enriched_data = enrichdistance.enrich(data=enriched_weather_data)
 currentio = DataLakeIO(
     process="enrich",
     sourceobject=sourcedefinition,
     state='current'
 )
+
+if loadtype == 'delta':
+    preharmonizer = PreHarmonizer(
+        currentio=currentio
+    )
+    enriched_weather_data=preharmonizer.preharmonize(
+        sourcedata=enriched_weather_data,
+        spark=spark
+    )
+
+
+enrichdistance = Distance()
+enriched_data = enrichdistance.enrich(data=enriched_weather_data)
+
+
 datawriter = DataWriter(
-    loadtype='full',
+    loadtype=loadtype,
     path=currentio.filepath(),
     spark=spark
 )
