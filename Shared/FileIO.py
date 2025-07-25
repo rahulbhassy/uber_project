@@ -2,6 +2,9 @@ import os
 import json
 from pathlib import Path
 from datetime import datetime
+
+from pyspark.sql import SparkSession
+
 # -- CONFIG --
 DATALAKE_PREFIX = r"C:\Users\HP\uber_project\Data"
 
@@ -224,3 +227,41 @@ class GeoJsonIO:
 
         print("GeoJSON validation and fixing completed successfully.")
         return output_filename
+
+class DeltaLakeOps:
+    def __init__(self,path: str,spark: SparkSession):
+        self.path = path
+        self.spark = spark
+
+    def getHistory(self,count: bool = False):
+        historyDF = self.spark.sql(f"DESCRIBE HISTORY delta.`{self.path}`")
+        historyDF.show()
+        if count:
+            # 2. Collect just the version numbers
+            versions = [row.version for row in historyDF.select("version").collect()]
+
+            # 3. For each version, issue a COUNT(*) query
+            results = []
+            for v in versions:
+                cnt = self.spark.sql(f"""
+                    SELECT {v} AS version,
+                           COUNT(*) AS record_count
+                      FROM delta.`{self.path}` VERSION AS OF {v}
+                """).collect()[0]
+                results.append((cnt.version, cnt.record_count))
+
+            # 4. Display all at once
+            for version, count in results:
+                print(f"Version {version:>2} → {count} rows")
+
+    def restore(self, version: int):
+        """
+        Restores the Delta table to a specific version.
+
+        :param version: The version number to restore to.
+        """
+        self.spark.sql(f"""
+            RESTORE delta.`{self.path}`
+            TO VERSION AS OF {version};
+        """)
+        print(f"Restored Delta table at {self.path} to version {version}.")
