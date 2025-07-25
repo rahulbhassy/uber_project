@@ -89,8 +89,6 @@ class DataLoader:
             # Post-load analysis
             load_time = time.time() - start_time
             print(f"\n✅ Successfully loaded data in {load_time:.2f} seconds")
-            print(f"📊 Schema Preview:")
-            df.printSchema()
 
             # Safe row count (avoid OOM for large datasets)
             try:
@@ -101,16 +99,6 @@ class DataLoader:
 
             col_count = len(df.columns)
             print(f"📦 Column Count: {col_count}")
-
-            # Sample data preview
-            if col_count > 0:
-                print("\n🔍 Data Sample (first 5 rows):")
-                try:
-                    sample = df.limit(5).toPandas()
-                    print(sample.to_string(index=False))
-                except Exception as e:
-                    print(f"⚠️ Could not show sample: {str(e)[:100]}")
-
             print("=" * 80)
             return df
 
