@@ -13,7 +13,7 @@ spark = create_spark_session()
 '''
 Fact Tables - uberfares , tripdetails
 '''
-sourceobject = "tripdetails"
+sourceobject = "uberfares"
 loadtype = "delta"
 sourceschema = sourceschema(sourcedefinition=sourceobject)
 
