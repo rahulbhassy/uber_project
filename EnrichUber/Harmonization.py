@@ -162,10 +162,6 @@ class Distance:
 
     def haversine(self, lat1, lon1, lat2, lon2):
         try:
-            # Log input parameters
-            print(f"\n📐 Calculating distance between: "
-                  f"({lat1:.6f}, {lon1:.6f}) → ({lat2:.6f}, {lon2:.6f})")
-
             # Convert to radians
             lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
 
@@ -175,8 +171,6 @@ class Distance:
             a = math.sin(dlat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
             c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
             distance = float(f"{self.R * c:.2f}")
-
-            print(f"📍 Calculated distance: {distance} km")
             return distance
 
         except Exception as e:
@@ -187,8 +181,6 @@ class Distance:
         print("\n" + "=" * 80)
         print("STARTING DISTANCE CALCULATION")
         print("=" * 80)
-        print(f"📊 Input DataFrame schema:")
-        data.printSchema()
         print(f"🧮 Row count before enrichment: {data.count()}")
 
         # Register UDF
@@ -208,15 +200,6 @@ class Distance:
         print(f"  ✅ Valid distances:   {valid_distances} rows")
         print(f"  ❌ Null distances:    {null_distances} rows")
         print(f"  🧮 Total rows:        {data.count()} rows")
-
-        if valid_distances > 0:
-            stats = data.select("distance_km").summary("min", "max", "mean").collect()
-            min_dist = stats[0]["distance_km"]
-            max_dist = stats[1]["distance_km"]
-            avg_dist = stats[2]["distance_km"]
-            print(f"  📏 Distance stats:    Min={min_dist:.2f}km | Max={max_dist:.2f}km | Avg={avg_dist:.2f}km")
-
-        print("=" * 80 + "\n")
         return data
 
 

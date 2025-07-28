@@ -49,9 +49,9 @@ def main():
         fake=fake,
         max_customer_id=max_customer_id,
         max_driver_id=max_driver_id,
-        num_customers=35,
-        num_drivers=12,
-        num_vehicles=7
+        num_customers=70,
+        num_drivers=24,
+        num_vehicles=14
     )
 
     # 4. Combine with existing data
