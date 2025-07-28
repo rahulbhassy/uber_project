@@ -19,7 +19,7 @@ def create_spark_session():
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .config("spark.driver.extraJavaOptions",
-                "-Dlog4j.configuration=file:///C:/Users/HP/uber_project/config/log4j.properties") \
+                "-Dlog4j.configuration=file:///C:/Users/HP/uber_project/Shared/log4j.properties") \
         .getOrCreate()
 
     return spark
@@ -40,7 +40,7 @@ def create_spark_session_jdbc():
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .config("spark.driver.extraJavaOptions",
-                "-Dlog4j.configuration=file:///C:/Users/HP/uber_project/config/log4j.properties") \
+                "-Dlog4j.configuration=file:///C:/Users/HP/uber_project/Shared/log4j.properties") \
         .getOrCreate()
 
     return spark
@@ -75,7 +75,7 @@ def create_spark_session_sedona():
         .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
         .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
         .config("spark.driver.extraJavaOptions",
-                "-Dlog4j.configuration=file:///C:/Users/HP/uber_project/config/log4j.properties") \
+                "-Dlog4j.configuration=file:///C:/Users/HP/uber_project/Shared/log4j.properties") \
         .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer") \
         .config("spark.kryo.registrator", "org.apache.sedona.core.serde.SedonaKryoRegistrator") \
         .getOrCreate()
