@@ -15,7 +15,8 @@ loadtype = 'full'
 readuberio = DataLakeIO(
     process='readenrich',
     sourceobject=sourceobjectuber,
-    state='current'
+    state='current',
+    loadtype=loadtype
 )
 uberpath = readuberio.filepath()
 spark.sql(f"""
@@ -33,7 +34,8 @@ readfeaturesio = DataLakeIO(
 )
 dataloader = DataLoader(
     path=readfeaturesio.filepath(),
-    filetype=readfeaturesio.filetype()
+    filetype=readfeaturesio.filetype(),
+    loadtype=loadtype
 )
 featuresdata = dataloader.LoadData(spark)
 featuresdata.createOrReplaceTempView("boroughs")
