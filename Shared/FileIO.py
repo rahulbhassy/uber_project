@@ -265,3 +265,100 @@ class DeltaLakeOps:
             TO VERSION AS OF {version};
         """)
         print(f"Restored Delta table at {self.path} to version {version}.")
+
+
+# Shared/FileIO.py
+
+from dash import Dash, dash_table, html
+import dash_bootstrap_components as dbc
+from dash_bootstrap_components import Card, CardBody
+from pyspark.sql import DataFrame
+from shapely.geometry import Point, Polygon, LineString
+
+
+class SparkTableViewer:
+    """
+    Dash-based Spark DataFrame viewer.
+    If table name is 'spatial', handles geometry serialization.
+    """
+
+    def __init__(self, df: DataFrame, table_name: str = '', limit: int = 500, page_size: int = 20):
+        if not hasattr(df, 'columns'):
+            raise ValueError("Expected a PySpark DataFrame.")
+
+        self.df = df.limit(limit)
+        self.columns = df.columns
+        self.page_size = page_size
+        self.table_name = table_name.lower()
+
+        # Choose the appropriate serialization
+        if self.table_name == 'spatial':
+            self.data = self._serialize_spatial_rows(self.df.collect(), self.columns)
+        else:
+            self.data = [row.asDict() for row in self.df.collect()]
+
+    def _serialize_spatial_value(self, val):
+        try:
+            if hasattr(val, 'toText'):  # Sedona geometry
+                return val.toText()
+            elif isinstance(val, (Point, Polygon, LineString)):  # Shapely geometry
+                return val.wkt
+            return val
+        except Exception:
+            return str(val)
+
+    def _serialize_spatial_rows(self, rows, columns):
+        serialized = []
+        for row in rows:
+            serialized.append({
+                col: self._serialize_spatial_value(val)
+                for col, val in zip(columns, row)
+            })
+        return serialized
+
+    def display(self, host='127.0.0.1', port=8050, debug=True):
+        """
+        Launch Dash app with styled DataTable inside a Bootstrap card.
+        """
+        app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+        table = dash_table.DataTable(
+            columns=[{"name": c, "id": c} for c in self.columns],
+            data=self.data,
+            page_size=self.page_size,
+            filter_action="native",
+            sort_action="native",
+            style_table={
+                'overflowX': 'auto',
+                'overflowY': 'auto',
+                'maxHeight': 'calc(100vh - 200px)',
+                'height': '100%',
+                'width': '100%',
+            },
+            style_header={
+                'backgroundColor': '#004085',
+                'color': 'white',
+                'fontWeight': 'bold',
+                'textAlign': 'center',
+                'position': 'sticky',
+                'top': 0,
+                'zIndex': 1,
+            },
+            style_cell={
+                'textAlign': 'left',
+                'padding': '5px',
+                'minWidth': '100px',
+                'whiteSpace': 'normal',
+            },
+            style_data_conditional=[
+                {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'}
+            ]
+        )
+
+        card = Card([
+            html.H4("Spark DataFrame Viewer", className="card-title p-2 text-white bg-primary"),
+            CardBody(table)
+        ], className="m-4 shadow-sm")
+
+        app.layout = html.Div([card], className="bg-light vh-100")
+        app.run(host=host, port=port, debug=debug)
