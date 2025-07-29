@@ -187,3 +187,9 @@ ValueError: I/O operation on closed file.
 2025-07-29 09:15:26,717 - INFO - [33mPress CTRL+C to quit[0m
 2025-07-29 09:15:48,137 - INFO - 127.0.0.1 - - [29/Jul/2025 09:15:48] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
 2025-07-29 09:23:48,870 - INFO - 127.0.0.1 - - [29/Jul/2025 09:23:48] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 10:38:39,774 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.101:5000
+2025-07-29 10:38:39,774 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-29 10:39:03,894 - INFO - 127.0.0.1 - - [29/Jul/2025 10:39:03] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
