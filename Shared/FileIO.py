@@ -2,7 +2,11 @@ import os
 import json
 from pathlib import Path
 from datetime import datetime
-
+from dash import Dash, dash_table, html
+import dash_bootstrap_components as dbc
+from dash_bootstrap_components import Card, CardBody
+from pyspark.sql import DataFrame
+from shapely.geometry import Point, Polygon, LineString
 from pyspark.sql import SparkSession
 
 # -- CONFIG --
@@ -277,11 +281,6 @@ class SparkTableViewer:
     Dash-based Spark DataFrame viewer.
     If table name is 'spatial', handles geometry serialization.
     """
-    from dash import Dash, dash_table, html
-    import dash_bootstrap_components as dbc
-    from dash_bootstrap_components import Card, CardBody
-    from pyspark.sql import DataFrame
-    from shapely.geometry import Point, Polygon, LineString
 
     def __init__(self, df: DataFrame, table_name: str = '', limit: int = 500, page_size: int = 20):
         if not hasattr(df, 'columns'):
