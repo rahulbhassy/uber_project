@@ -1,0 +1,189 @@
+2025-07-28 20:02:43,553 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 20:02:43,553 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 20:07:45,014 - INFO - 127.0.0.1 - - [28/Jul/2025 20:07:45] "[31m[1mPOST /execute HTTP/1.1[0m" 401 -
+2025-07-28 20:11:25,067 - INFO - 127.0.0.1 - - [28/Jul/2025 20:11:25] "[31m[1mPOST /execute HTTP/1.1[0m" 400 -
+2025-07-28 20:37:52,523 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 20:37:52,525 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 20:39:51,972 - INFO - 127.0.0.1 - - [28/Jul/2025 20:39:51] "[31m[1mPOST /execute HTTP/1.1[0m" 400 -
+2025-07-28 20:43:37,507 - INFO - 127.0.0.1 - - [28/Jul/2025 20:43:37] "[31m[1mPOST /execute HTTP/1.1[0m" 400 -
+2025-07-28 20:46:19,126 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 20:46:19,126 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 20:48:25,166 - INFO - 127.0.0.1 - - [28/Jul/2025 20:48:25] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 20:48:25,193 - ERROR - Critical error: [WinError 2] The system cannot find the file specified
+Traceback (most recent call last):
+  File "C:\Users\HP\uber_project\listener_service\notebook_service.py", line 102, in run_notebook
+    result = subprocess.run(
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python310\lib\subprocess.py", line 501, in run
+    with Popen(*popenargs, **kwargs) as process:
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python310\lib\subprocess.py", line 969, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python310\lib\subprocess.py", line 1438, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+FileNotFoundError: [WinError 2] The system cannot find the file specified
+2025-07-28 20:53:59,094 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 20:53:59,094 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 20:54:14,641 - INFO - 127.0.0.1 - - [28/Jul/2025 20:54:14] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 20:54:25,453 - ERROR - Subprocess error: Command '['C:\\Users\\HP\\uber_project\\.venv\\Scripts\\python.exe', '-m', 'papermill', 'C:\\Users\\HP\\uber_project\\NoteBooks\\Process_UberFact.py', 'C:/Users/HP/uber_project/output/Process_UberFact20250728.json', '-p', 'sourceobject', 'uberfares', '-p', 'loadtype', 'delta']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "C:\Users\HP\uber_project\listener_service\notebook_service.py", line 111, in run_notebook
+    result = subprocess.run(
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python310\lib\subprocess.py", line 524, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['C:\\Users\\HP\\uber_project\\.venv\\Scripts\\python.exe', '-m', 'papermill', 'C:\\Users\\HP\\uber_project\\NoteBooks\\Process_UberFact.py', 'C:/Users/HP/uber_project/output/Process_UberFact20250728.json', '-p', 'sourceobject', 'uberfares', '-p', 'loadtype', 'delta']' returned non-zero exit status 1.
+2025-07-28 21:10:59,970 - INFO - 127.0.0.1 - - [28/Jul/2025 21:10:59] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:11:04,864 - ERROR - Subprocess error: Command '['C:\\Users\\HP\\uber_project\\.venv\\Scripts\\python.exe', '-m', 'papermill', 'C:\\Users\\HP\\uber_project\\NoteBooks\\Process_UberFact.py', 'C:/Users/HP/uber_project/output/Process_UberFact20250728.json', '-p', 'sourceobject', 'uberfares', '-p', 'loadtype', 'delta']' returned non-zero exit status 1.
+Traceback (most recent call last):
+  File "C:\Users\HP\uber_project\listener_service\notebook_service.py", line 111, in run_notebook
+  File "C:\Users\HP\AppData\Local\Programs\Python\Python310\lib\subprocess.py", line 524, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '['C:\\Users\\HP\\uber_project\\.venv\\Scripts\\python.exe', '-m', 'papermill', 'C:\\Users\\HP\\uber_project\\NoteBooks\\Process_UberFact.py', 'C:/Users/HP/uber_project/output/Process_UberFact20250728.json', '-p', 'sourceobject', 'uberfares', '-p', 'loadtype', 'delta']' returned non-zero exit status 1.
+2025-07-28 21:12:44,463 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 21:12:44,469 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 21:12:55,085 - INFO - 127.0.0.1 - - [28/Jul/2025 21:12:55] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:12:56,229 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728211255.log
+2025-07-28 21:20:42,017 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 21:20:42,017 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 21:20:50,542 - INFO - 127.0.0.1 - - [28/Jul/2025 21:20:50] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:20:50,688 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728212050.log
+2025-07-28 21:27:09,862 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 21:27:09,862 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 21:27:24,028 - INFO - 127.0.0.1 - - [28/Jul/2025 21:27:24] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:27:24,876 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728212724.log
+2025-07-28 21:29:36,943 - INFO - 127.0.0.1 - - [28/Jul/2025 21:29:36] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:30:23,646 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728212936.log
+2025-07-28 21:34:05,167 - INFO - 127.0.0.1 - - [28/Jul/2025 21:34:05] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:34:20,900 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728213405.log
+2025-07-28 21:36:31,785 - INFO - 127.0.0.1 - - [28/Jul/2025 21:36:31] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:36:56,734 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728213631.log
+2025-07-28 21:55:44,496 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 21:55:44,496 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 21:55:58,165 - INFO - 127.0.0.1 - - [28/Jul/2025 21:55:58] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 21:56:16,589 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728215558.log
+2025-07-28 21:58:55,787 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 21:58:55,787 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 21:59:08,145 - INFO - 127.0.0.1 - - [28/Jul/2025 21:59:08] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 22:00:13,560 - ERROR - Execution failed for C:\Users\HP\uber_project\NoteBooks\Process_UberFact.py. See C:\Users\HP\uber_project\logs\execution_20250728215908.log
+2025-07-28 22:05:43,786 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 22:05:43,787 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 22:05:49,725 - INFO - 127.0.0.1 - - [28/Jul/2025 22:05:49] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 22:34:26,475 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 22:34:26,475 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 22:34:38,975 - INFO - 127.0.0.1 - - [28/Jul/2025 22:34:38] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 22:36:13,442 - ERROR - Critical error: I/O operation on closed file.
+Traceback (most recent call last):
+  File "C:\Users\HP\uber_project\listener_service\notebook_service.py", line 161, in run_notebook
+    f.write("\nERROR: Output directory not created!")
+ValueError: I/O operation on closed file.
+2025-07-28 22:37:26,462 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 22:37:26,462 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 22:37:44,012 - INFO - 127.0.0.1 - - [28/Jul/2025 22:37:44] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 22:50:30,252 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 22:50:30,252 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 22:50:41,615 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 22:50:41,615 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 22:54:05,860 - INFO - 127.0.0.1 - - [28/Jul/2025 22:54:05] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 22:58:42,602 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 22:58:42,602 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 22:59:50,067 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 22:59:50,067 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 23:06:10,862 - INFO - 127.0.0.1 - - [28/Jul/2025 23:06:10] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 23:24:06,626 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 23:24:06,626 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 23:24:21,861 - INFO - 127.0.0.1 - - [28/Jul/2025 23:24:21] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-28 23:35:34,805 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.106:5000
+2025-07-28 23:35:34,805 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-28 23:36:00,004 - INFO - 127.0.0.1 - - [28/Jul/2025 23:36:00] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 07:54:11,623 - INFO - 127.0.0.1 - - [29/Jul/2025 07:54:11] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 07:55:46,549 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.101:5000
+2025-07-29 07:55:46,549 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-29 07:57:52,583 - INFO - 127.0.0.1 - - [29/Jul/2025 07:57:52] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 07:59:52,101 - INFO - 127.0.0.1 - - [29/Jul/2025 07:59:52] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 08:31:26,580 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.101:5000
+2025-07-29 08:31:26,581 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-29 08:31:50,393 - INFO - 127.0.0.1 - - [29/Jul/2025 08:31:50] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 08:39:12,016 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.101:5000
+2025-07-29 08:39:12,016 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-29 08:39:32,282 - INFO - 127.0.0.1 - - [29/Jul/2025 08:39:32] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 08:54:03,033 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.101:5000
+2025-07-29 08:54:03,033 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-29 08:58:00,576 - INFO - 127.0.0.1 - - [29/Jul/2025 08:58:00] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 09:02:23,322 - INFO - 127.0.0.1 - - [29/Jul/2025 09:02:23] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 09:13:19,791 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.101:5000
+2025-07-29 09:13:19,792 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-29 09:13:39,977 - INFO - 127.0.0.1 - - [29/Jul/2025 09:13:39] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 09:15:26,717 - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.68.101:5000
+2025-07-29 09:15:26,717 - INFO - [33mPress CTRL+C to quit[0m
+2025-07-29 09:15:48,137 - INFO - 127.0.0.1 - - [29/Jul/2025 09:15:48] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
+2025-07-29 09:23:48,870 - INFO - 127.0.0.1 - - [29/Jul/2025 09:23:48] "[35m[1mPOST /execute HTTP/1.1[0m" 202 -
