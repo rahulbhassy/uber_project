@@ -1,4 +1,4 @@
-from Shared.pyspark_env import setEnv
+from Shared.pyspark_env import setVEnv
 from Shared.sparkconfig import create_spark_session
 from Schema import sourceschema
 from Shared.DataLoader import DataLoader
@@ -8,12 +8,12 @@ from DataCleaner import DataCleaner
 
 
 
-setEnv()
+setVEnv()
 spark = create_spark_session()
 '''
 Fact Tables - uberfares , tripdetails
 '''
-sourceobject = "tripdetails"
+sourceobject = "uberfares"
 loadtype = "delta"
 sourceschema = sourceschema(sourcedefinition=sourceobject)
 
