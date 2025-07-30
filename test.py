@@ -1,7 +1,35 @@
+from Shared.FileIO import DataLakeIO
 
-from Shared.sparkconfig import create_spark_session
-from Shared.FileIO import DeltaLakeOps
-spark = create_spark_session()
-path = "C:/Users/HP/uber_project/Data/Raw/uberfares/current/uberfares.delta"
-ops = DeltaLakeOps(path=path,spark=spark)
-ops.restore(version=23)
+loadio = DataLakeIO(
+    process='load',
+    table='uberfares',
+    loadtype='full'
+)
+print(loadio.filepath())
+
+readio = DataLakeIO(
+    process='read',
+    table='uberfares',
+    loadtype='full',
+    state='current',
+    layer= 'raw'
+)
+print(readio.filepath())
+readio = DataLakeIO(
+    process='read',
+    table='uberfares',
+    loadtype='full',
+    state='delta',
+    layer= 'raw'
+)
+print(readio.filepath())
+
+readio = DataLakeIO(
+    process='read',
+    table='uberfares',
+    loadtype='full',
+    state='current',
+    layer= 'enrich',
+    runtype='dev'
+)
+print(readio.filepath())

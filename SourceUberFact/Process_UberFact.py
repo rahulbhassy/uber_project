@@ -14,18 +14,18 @@ spark = create_spark_session()
 Fact Tables - uberfares , tripdetails
 '''
 sourceobject = "uberfares"
-loadtype = "delta"
+loadtype = "full"
 sourceschema = sourceschema(sourcedefinition=sourceobject)
 
 loadio = DataLakeIO(
     process='load',
-    sourceobject=sourceobject,
+    table=sourceobject,
     loadtype=loadtype
 )
 dataloader = DataLoader(
     path=loadio.filepath(),
     schema=sourceschema,
-    filetype=loadio.filetype(),
+    filetype=loadio.file_ext(),
     loadtype=loadtype
 )
 source_data = dataloader.LoadData(spark)
@@ -39,8 +39,10 @@ destination_data = datacleaner.cleandata(sourcedata=source_data)
 
 currentio = DataLakeIO(
     process="write",
-    sourceobject=sourceobject,
-    state='current'
+    table=sourceobject,
+    state='current',
+    loadtype=loadtype,
+    runtype='dev'
 )
 datawriter = DataWriter(
     loadtype=loadtype,
