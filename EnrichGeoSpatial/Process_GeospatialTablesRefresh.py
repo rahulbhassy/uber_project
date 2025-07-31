@@ -13,10 +13,11 @@ sourceobjectborough = 'features'
 loadtype = 'full'
 
 readuberio = DataLakeIO(
-    process='readenrich',
-    sourceobject=sourceobjectuber,
+    process='read',
+    table=sourceobjectuber,
     state='current',
-    loadtype=loadtype
+    loadtype=loadtype,
+    layer='enrich'
 )
 uberpath = readuberio.filepath()
 spark.sql(f"""
@@ -28,13 +29,15 @@ spark.sql(f"""
 """)
 
 readfeaturesio = DataLakeIO(
-    process='readraw',
-    sourceobject=sourceobjectborough,
-    state='current'
+    process='read',
+    table=sourceobjectborough,
+    state='current',
+    layer='raw',
+    loadtype='full'
 )
 dataloader = DataLoader(
     path=readfeaturesio.filepath(),
-    filetype=readfeaturesio.filetype(),
+    filetype=readfeaturesio.file_ext(),
     loadtype=loadtype
 )
 featuresdata = dataloader.LoadData(spark)
@@ -54,14 +57,16 @@ spatial_analysis = spark.sql("""
     """)
 # Save the DataFrame as a Delta table (overwrite mode)
 currentio = DataLakeIO(
-    process='enrichgeospatial',
-    sourceobject='uber',
-    state='current'
+    process='write',
+    table='uber',
+    state='current',
+    layer='enrich',
+    loadtype='full'
 )
 datawriter = DataWriter(
     loadtype=loadtype,
     path=currentio.filepath(),
-    format=currentio.filetype(),
+    format=currentio.file_ext(),
     spark=spark
 )
 datawriter.WriteData(df=spatial_analysis)

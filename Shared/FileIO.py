@@ -1,145 +1,117 @@
-import os
+
 import json
 from pathlib import Path
-from datetime import datetime
-
+from dash import Dash, dash_table, html
+import dash_bootstrap_components as dbc
+from dash_bootstrap_components import Card, CardBody
+from pyspark.sql import DataFrame
+from shapely.geometry import Point, Polygon, LineString
 from pyspark.sql import SparkSession
 
 # -- CONFIG --
+import os
+from datetime import datetime
+from typing import List, Optional
+
 DATALAKE_PREFIX = r"C:\Users\HP\uber_project\Data"
 
 
 class DataLakeIO:
-    # Class-level constants for better performance
-    _ENRICHMENT_PROCESSES = {
-        "enrichweather": ["Enrich", "Enriched_Weather_uberData"],
-        "enrichdistance": ["Enrich", "Enriched_Distance_uberData"],
-        "enrich": ["Enrich", "Enriched"],
-        "readraw": ["Raw"],  # Special case handled in filepath()
-        "readenrich": ["Enrich", "Enriched"],
-        "enrichgeospatial": ["Enrich", "Enriched", "spatial", "newyork"]
+    _RAW_TABLES = frozenset({
+        "uberfares", "tripdetails", "driverdetails",
+        "customerdetails", "vehicledetails", "features"
+    })
+    _INPUT_SUFFIX = ".geojson"
+
+    # centralized layer‐to‐path mapping
+    _LAYER_MAP = {
+        'raw': {
+            'features': ['Raw', 'boroughs', 'newyork'],
+            '__default__': ['Raw']
+        },
+        'input': {
+            '__default__': ['Input', 'Borough', 'NewYork']
+        },
+        'enrich': {
+            'uber': ['Enrich', 'Enriched', 'spatial', 'newyork'],
+            'uberfares|enrichweather': ['Enrich', 'Enriched_Weather_uberData'],
+            '__default__': ['Enrich', 'Enriched']
+        }
     }
 
-    _DELTA_PROCESSES = frozenset([
-        "enrichweather", "enrichdistance", "enrich", "readraw", "readenrich", "enrichgeospatial"
-    ])
-
-    _RAW_PROCESSES = frozenset(["load", "read", "write"])
-    _SOURCE_TABLES_CSV = frozenset(["uberfares","tripdetails","driverdetails","customerdetails","vehicledetails"])
-
-    def __init__(self, process: str, loadtype: str = None,sourceobject: str = None, state: str = None):
-        # Cache lowercased values to avoid repeated operations
-        self.process = process
-        self._process_lower = process.lower()
-        self.sourceobject = sourceobject
-        self._sourceobject_lower = sourceobject.lower() if sourceobject else None
-        self.state = state
+    def __init__(
+            self,
+            process: str,
+            table: str,
+            loadtype: str,
+            state: Optional[str] = 'current',
+            runtype: Optional[str] = 'prod',
+            layer: Optional[str] = None,
+    ):
+        self.process = process.lower()
+        if layer:
+            self.layer = layer.lower()
+        else:
+            self.layer = layer
+        self.table = table.lower()
+        self.state = state.lower()
+        self.runtype = runtype.lower()
         self.loadtype = loadtype
 
-    # -- FORMAT RESOLVER --
-    def filetype(self) -> str:
-        """
-        Determine the file format for a given process/source.
+    def _get_layer_parts(self) -> List[str]:
+        cfg = self._LAYER_MAP.get(self.layer, {})
+        # special keys
+        if self.layer == 'raw' and self.table == 'features':
+            return cfg['features']
+        if self.layer == 'enrich' and self.table == 'uber':
+            return cfg['uber']
+        if self.layer == 'enrich' and self.table == 'uberfares' and self.process == 'enrichweather':
+            return cfg['uberfares|enrichweather']
+        # fallback
+        return cfg.get('__default__', [])
 
-        :param process: one of
-               - 'load', 'read', 'write'           (for raw Uber data)
-               - 'enrichweather', 'enrichdistance' (weather/distance enrich steps)
-               - 'enrich'                         (generic enrich)
-               - 'readraw', 'readenrich'          (reading back)
-        :param sourceobject: e.g. 'uberfares' (only used for raw load/read/write)
-        :param state: e.g. 'current'         (only used for raw write)
-        """
-        # Raw Uber data: CSV on load, Delta when writing current
-        if self._process_lower in self._RAW_PROCESSES:
-            if self._sourceobject_lower is None:
-                raise ValueError("`sourceobject` is required for raw load/read/write")
+    def file_ext(self) -> str:
+        if self.process == 'load':
+            if self.table in self._RAW_TABLES:
+                return 'csv'
+            if self.table.endswith(self._INPUT_SUFFIX):
+                return 'geojson'
+        if self.process in ('read', 'write','enrichweather'):
+            return 'delta' if self.state == 'current' else 'parquet'
 
-            if self._sourceobject_lower in self._SOURCE_TABLES_CSV:
-                return "delta" if self.state == "current" else "csv"
-            elif self._sourceobject_lower == "features":
-                return "delta" if self.state == "current" else "parquet"
-            elif self._sourceobject_lower.endswith(".geojson"):
-                return "geojson"
+    def _build_path(self, parts: List[str]) -> str:
+        if self.runtype == 'dev':
+            return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), 'Sandbox', *parts)
+        return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), *parts)
 
-        # Enrichment steps: always delta
-        if self._process_lower in self._DELTA_PROCESSES:
-            return "delta"
+    def filepath(self, date: Optional[str] = None) -> str:
+        ext = self.file_ext()
 
-        raise ValueError(f"No filetype rule for process '{self.process}'")
+        if self.table.endswith(self._INPUT_SUFFIX):
+            parts = self._get_layer_parts() + [self.table]
+            return self._build_path(parts)
 
-    def _build_path_parts(self, base_parts, filename):
-        """Helper method to build path parts and join them."""
-        parts = [DATALAKE_PREFIX.rstrip(os.sep)] + base_parts
-        if self.state:
-            parts.append(self.state)
-        parts.append(filename)
-        return os.path.join(*parts)
+        if self.process == 'load':
+            if self.table in self._RAW_TABLES:
+                # YYYY‑MM‑DD
+                folder = date or datetime.now().strftime('%Y-%m-%d')
+                if self.loadtype == 'full':
+                    return self._build_path(['DataSource', '*', f"{self.table}.csv"])
+                # delta or default
+                return self._build_path(['DataSource', folder, f"{self.table}.csv"])
 
-    # -- PATH BUILDER --
-    def filepath(self) -> str:
-        """
-        Build a platform‑safe path for the given process.
+            raise ValueError(f"Can't load table '{self.table}' in process 'load'")
 
-        :param process: see `filetype` docstring
-        :param sourceobject: e.g. 'uberfares'
-        :param state: e.g. 'current'
-        """
-        # Cache filetype to avoid multiple calls
-        ext = self.filetype()
-
-        # 1) Raw load
-        if self._process_lower == "load":
-            if self._sourceobject_lower in self._SOURCE_TABLES_CSV:
-                today_folder = datetime.now().strftime('%Y-%m-%d')
-                if self.loadtype == 'delta':
-                    return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), "DataSource",today_folder, f"{self._sourceobject_lower}.csv")
-                elif self.loadtype == 'full':
-                    return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), "DataSource","*",f"{self._sourceobject_lower}.csv")
-            elif self._sourceobject_lower and self._sourceobject_lower.endswith(".geojson"):
-                parts = ["Input", "Borough", "NewYork", self._sourceobject_lower]
-                return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), *parts)
-            else:
-                raise ValueError(f"No load path for '{self.sourceobject}'")
-
-        # 2) Raw read/write
-        if self._process_lower in ("read", "write"):
-            # Handle geojson files
-            if self._sourceobject_lower.endswith(".geojson"):
-                so = f"fixed_{self._sourceobject_lower}" if self._process_lower == "read" else self._sourceobject_lower
-                parts = ["Input", "Borough", "NewYork",so]
-                return os.path.join(DATALAKE_PREFIX.rstrip(os.sep), *parts)
-
-            # Handle features
-            if self._sourceobject_lower == "features":
-                parts = ["Raw", "boroughs", "newyork", self._sourceobject_lower]
-            else:
-                parts = ["Raw", self._sourceobject_lower]
-
-            filename = f"{self._sourceobject_lower}.{ext}"
-            return self._build_path_parts(parts, filename)
-
-        # 3) Enrichment
-        if self._process_lower in self._ENRICHMENT_PROCESSES:
-            sub = self._ENRICHMENT_PROCESSES[self._process_lower].copy()
-
-            # Special handling for readraw with features
-            if self._process_lower == "readraw" and self._sourceobject_lower == "features":
-                sub = ["Raw", "boroughs", "newyork"]
-
-            so = self._sourceobject_lower or ""
-            parts = sub + ([so] if so else [])
-            filename = f"{so}.{ext}"
-            return self._build_path_parts(parts, filename)
+        if self.process in ('read', 'write','enrichweather'):
+            parts = self._get_layer_parts()
+            if self.state == 'current':
+                parts = parts + [self.table, self.state, f"{self.table}.{ext}"]
+            elif self.state == 'delta':
+                folder = date or datetime.now().strftime('%Y-%m-%d')
+                parts = parts + [self.table, self.state,folder, f"{self.table}.{ext}"]
+            return self._build_path(parts)
 
         raise ValueError(f"Unknown process '{self.process}'")
-
-    def deltafilepath(self,date:str = None):
-        intermediateio = IntermediateIO(
-            fullpath=self.filepath(),
-            date=date
-        )
-        return intermediateio.get_deltapath()
-
 
 class IntermediateIO:
     _TABLES = frozenset([
@@ -189,7 +161,6 @@ class IntermediateIO:
         delta_path   = ipath / "delta" / today_folder / f"{self.sourceobject}.parquet"
         return str(delta_path)
 
-
 class GeoJsonIO:
     def __init__(self, input_filename: str, path: str, validator_func=None):
         self.input_filename = input_filename
@@ -219,7 +190,12 @@ class GeoJsonIO:
         fixed_geojson = validator(geojson_input)
 
         output_filename = f"fixed_{self.input_filename}"
-        datalake_io = DataLakeIO(process='write', sourceobject=output_filename)
+        datalake_io = DataLakeIO(
+            process='write',
+            table=output_filename,
+            loadtype='full',
+            layer='input'
+        )
         fixed_geojson_path = datalake_io.filepath()
 
         with open(fixed_geojson_path, 'w') as file:
@@ -267,21 +243,11 @@ class DeltaLakeOps:
         print(f"Restored Delta table at {self.path} to version {version}.")
 
 
-# Shared/FileIO.py
-
-
-
-
 class SparkTableViewer:
     """
     Dash-based Spark DataFrame viewer.
     If table name is 'spatial', handles geometry serialization.
     """
-    from dash import Dash, dash_table, html
-    import dash_bootstrap_components as dbc
-    from dash_bootstrap_components import Card, CardBody
-    from pyspark.sql import DataFrame
-    from shapely.geometry import Point, Polygon, LineString
 
     def __init__(self, df: DataFrame, table_name: str = '', limit: int = 500, page_size: int = 20):
         if not hasattr(df, 'columns'):

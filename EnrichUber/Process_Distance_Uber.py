@@ -1,19 +1,21 @@
 from Shared.sparkconfig import create_spark_session
-from Shared.pyspark_env import setEnv
+from Shared.pyspark_env import setVEnv
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
 from Harmonization import Distance,PreHarmonizer
 
-setEnv()
+setVEnv()
 spark = create_spark_session()
-sourcedefinition = "uberfares"
+table = "uberfares"
 loadtype = 'full'
 
 readio = DataLakeIO(
     process="enrichweather",
-    sourceobject=sourcedefinition,
-    state='current'
+    table=table,
+    state='current',
+    layer='enrich',
+    loadtype=loadtype
 )
 dataloader = DataLoader(
     path=readio.filepath(),
@@ -21,9 +23,11 @@ dataloader = DataLoader(
 )
 enriched_weather_data = dataloader.LoadData(spark)
 currentio = DataLakeIO(
-    process="enrich",
-    sourceobject=sourcedefinition,
-    state='current'
+    process="write",
+    table=table,
+    state='current',
+    layer='enrich',
+    loadtype=loadtype
 )
 
 if loadtype == 'delta':

@@ -34,10 +34,12 @@ class GetData:
     def _get_trip_ids(self):
         deltafileio = DataLakeIO(
             process='read',
-            sourceobject='uberfares',
-            state='current'
+            table=self.table,
+            state='delta',
+            layer='raw',
+            loadtype='delta'
         )
-        deltapath = deltafileio.deltafilepath()
+        deltapath = deltafileio.filepath()
         print(f"Input folder created for getting New Trip Ids: {deltapath}")
         dataloader = DataLoader(
             path=deltapath,
@@ -53,8 +55,10 @@ class GetData:
     def read_existing_data(self):
         currentio = DataLakeIO(
             process='read',
-            sourceobject=self.table,
-            state='current'
+            table=self.table,
+            state='current',
+            layer='raw',
+            loadtype='full'
         )
         dataloader = DataLoader(
             path=currentio.filepath(),

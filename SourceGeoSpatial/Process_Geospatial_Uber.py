@@ -8,7 +8,7 @@ from GeospatialVH import Validator,Harmonizer
 
 setVEnv()
 spark = create_spark_session_sedona()
-skip_validation = True
+skip_validation = False
 input_file_name = 'new-york-city-boroughs.geojson'
 loadtype='full'
 validator = Validator()
@@ -19,7 +19,9 @@ harmonizer = Harmonizer(
 if not skip_validation:
     loadio = DataLakeIO(
         process='load',
-        sourceobject=input_file_name
+        table=input_file_name,
+        loadtype=loadtype,
+        layer= 'input'
     )
     geojsonio = GeoJsonIO(
         input_filename=input_file_name,
@@ -31,7 +33,9 @@ if not skip_validation:
 
 readio = DataLakeIO(
     process='read',
-    sourceobject=input_file_name
+    table=input_file_name,
+    layer = 'input',
+    loadtype=loadtype
 )
 dataloader = DataLoader(
     path=readio.filepath(),
@@ -43,13 +47,16 @@ boroughs_df = dataloader.LoadData(spark)
 features_df = harmonizer.harmoniseboroughs(boroughs_df=boroughs_df)
 currentio = DataLakeIO(
     process='write',
-    sourceobject='features',
-    state= 'current'
+    table='features',
+    state= 'current',
+    loadtype= loadtype,
+    layer='raw',
+    runtype='dev'
 )
 datawriter = DataWriter(
     loadtype=loadtype,
     path=currentio.filepath(),
-    format=currentio.filetype(),
+    format=currentio.file_ext(),
     spark=spark
 )
 datawriter.WriteData(df=features_df)
