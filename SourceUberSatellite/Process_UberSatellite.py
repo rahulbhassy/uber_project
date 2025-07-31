@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 setEnv()
 spark = create_spark_session()
 satellite_tables = ["customerdetails","driverdetails","vehicledetails"]
-loadtype = 'delta'
+loadtype = 'full'
 
 def process_table(sourceobject: str):
     """Load, clean and write one satellite table."""
@@ -18,13 +18,13 @@ def process_table(sourceobject: str):
 
     loadio = DataLakeIO(
         process='load',
-        sourceobject=sourceobject,
+        table=sourceobject,
         loadtype=loadtype
     )
     dataloader = DataLoader(
         path=loadio.filepath(),
         schema=schema,
-        filetype=loadio.filetype(),
+        filetype=loadio.file_ext(),
         loadtype=loadtype
     )
     source_data = dataloader.LoadData(spark)
@@ -38,8 +38,10 @@ def process_table(sourceobject: str):
 
     currentio = DataLakeIO(
         process="write",
-        sourceobject=sourceobject,
-        state='current'
+        table=sourceobject,
+        state='current',
+        loadtype=loadtype,
+        layer='raw'
     )
     datawriter = DataWriter(
         loadtype=loadtype,

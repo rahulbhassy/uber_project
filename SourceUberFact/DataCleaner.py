@@ -19,7 +19,7 @@ class DataCleaner:
         "tripdetails": "trip_id"
     }
     def __init__(self,sourcedefinition,loadtype: str, spark: SparkSession = None ):
-        self.sourcetype = sourcedefinition
+        self.table = sourcedefinition
         self.spark = spark
         self.loadtype = loadtype
 
@@ -27,15 +27,17 @@ class DataCleaner:
 
     def _preharmonise(self,sourcedata: DataFrame):
         currentio=DataLakeIO(
-            process="write",
-            sourceobject=self.sourcetype,
-            state='current'
+            process="read",
+            table=self.table,
+            layer='raw',
+            state='current',
+            loadtype='full'
         )
         dataloader = DataLoader(
             path=currentio.filepath(),
             filetype='delta'
         )
-        key_col = self._KEY_COLUMNS[self.sourcetype]
+        key_col = self._KEY_COLUMNS[self.table]
         current_keys = dataloader.LoadData(self.spark).select(key_col)
         return sourcedata.join(current_keys, on=key_col, how="left_anti")
 
@@ -44,7 +46,7 @@ class DataCleaner:
         rawdata: DataFrame
     ):
         coord_udf = udf(validate_coordinates, BooleanType())
-        if self.sourcetype == "uberfares":
+        if self.table == "uberfares":
             return  rawdata \
                 .filter(
                 "pickup_latitude IS NOT NULL AND pickup_longitude IS NOT NULL AND dropoff_latitude IS NOT NULL AND dropoff_longitude IS NOT NULL") \
@@ -56,7 +58,7 @@ class DataCleaner:
                 .filter(col("fare_amount") > 2.5) \
                 .withColumn("date", date_format("pickup_datetime", "yyyy-MM-dd"))
 
-        elif self.sourcetype == "tripdetails":
+        elif self.table == "tripdetails":
             return rawdata \
                 .filter(col("trip_id").isNotNull()) \
                 .filter(col("driver_id").isNotNull()) \
@@ -69,7 +71,7 @@ class DataCleaner:
         self,
         cleandata: DataFrame
     ):
-        if self.sourcetype == "uberfares":
+        if self.table == "uberfares":
             return cleandata \
                 .withColumn("pickup_hour", hour(col("pickup_datetime"))) \
                 .withColumn("pickup_day", dayofweek(col("pickup_datetime"))) \
@@ -81,7 +83,7 @@ class DataCleaner:
         sourcedata: DataFrame
     ):
         cleaned_data = self.clean(rawdata=sourcedata)
-        if self.sourcetype == 'uberfares':
+        if self.table == 'uberfares':
             cleaned_data =  self.addtemporalfeatures(cleandata=cleaned_data)
         if self.loadtype == 'delta':
             return self._preharmonise(cleaned_data)

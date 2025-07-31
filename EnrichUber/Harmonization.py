@@ -28,14 +28,14 @@ class WeatherAPI:
                 precipitation = data["hourly"]["precipitation"]
                 avg_temp = sum(temperatures) / len(temperatures)
                 total_precipitation = sum(precipitation)
-                print(f"✅ SUCCESS for {date}: Temp={avg_temp:.2f}C, Precip={total_precipitation}mm")
+                print(f" SUCCESS for {date}: Temp={avg_temp:.2f}C, Precip={total_precipitation}mm")
                 return {"date": date, "avg_temp": avg_temp, "precipitation": total_precipitation}
             else:
-                print(f"❌ HTTP ERROR for {date}: Status {response.status_code}")
+                print(f" HTTP ERROR for {date}: Status {response.status_code}")
                 return {"date": date, "avg_temp": None, "precipitation": None}
 
         except Exception as e:
-            print(f"🚨 EXCEPTION for {date}: {str(e)[:100]}")
+            print(f" EXCEPTION for {date}: {str(e)[:100]}")
             return {"date": date, "avg_temp": None, "precipitation": None}
 
     # Function to enrich Uber data with weather data
@@ -55,21 +55,21 @@ class WeatherAPI:
         # Get distinct dates
         distinct_dates = [row.date for row in data.select("date").distinct().collect()]
         total_dates = len(distinct_dates)
-        print(f"\n📅 FOUND {total_dates} DISTINCT DATES IN DATASET")
+        print(f"\n FOUND {total_dates} DISTINCT DATES IN DATASET")
 
         # Initialize tracking structures
         successful_data = {}
         failed_dates = set(distinct_dates)
-        print(f"⚙️ INITIALIZING: All {total_dates} dates marked for first attempt")
+        print(f" INITIALIZING: All {total_dates} dates marked for first attempt")
 
         # Retry up to 3 times
         for attempt in range(3):
             if not failed_dates:
-                print(f"\n🌟 ALL DATES SUCCEEDED! Skipping attempt {attempt + 1}")
+                print(f"\n ALL DATES SUCCEEDED! Skipping attempt {attempt + 1}")
                 break
 
             print("\n" + "-" * 60)
-            print(f"🔄 ATTEMPT #{attempt + 1} STARTING: Processing {len(failed_dates)} failed dates")
+            print(f" ATTEMPT #{attempt + 1} STARTING: Processing {len(failed_dates)} failed dates")
             print("-" * 60)
 
             # Process failed dates in parallel
@@ -92,9 +92,9 @@ class WeatherAPI:
             # Update failed dates for next attempt
             failed_dates = current_failed
             print("\n" + "-" * 60)
-            print(f"📊 ATTEMPT #{attempt + 1} RESULTS:")
-            print(f"  ✅ SUCCEEDED: {success_count} dates")
-            print(f"  ❌ FAILED:    {len(failed_dates)} dates")
+            print(f" ATTEMPT #{attempt + 1} RESULTS:")
+            print(f"   SUCCEEDED: {success_count} dates")
+            print(f"   FAILED:    {len(failed_dates)} dates")
             print("-" * 60)
 
         # Final status report
@@ -109,7 +109,7 @@ class WeatherAPI:
         print(f"  FAILED FETCH:      {final_failures} ({final_failures / total_dates:.1%})")
 
         if final_failures > 0:
-            print("\n❌ FINAL FAILED DATES:")
+            print("\n FINAL FAILED DATES:")
             for i, date in enumerate(sorted(failed_dates), 1):
                 print(f"  {i}. {date}")
 
@@ -158,7 +158,7 @@ from pyspark.sql.types import DoubleType
 class Distance:
     def __init__(self):
         self.R = 6371  # Radius of Earth in kilometers
-        print("✅ Distance calculator initialized | Earth radius: 6371 km")
+        print(" Distance calculator initialized | Earth radius: 6371 km")
 
     def haversine(self, lat1, lon1, lat2, lon2):
         try:
@@ -174,18 +174,18 @@ class Distance:
             return distance
 
         except Exception as e:
-            print(f"🚨 Error in distance calculation: {str(e)[:100]}")
+            print(f" Error in distance calculation: {str(e)[:100]}")
             return None
 
     def enrich(self, data: DataFrame):
         print("\n" + "=" * 80)
         print("STARTING DISTANCE CALCULATION")
         print("=" * 80)
-        print(f"🧮 Row count before enrichment: {data.count()}")
+        print(f" Row count before enrichment: {data.count()}")
 
         # Register UDF
         haversine_udf = udf(self.haversine, DoubleType())
-        print("🔄 Registered Haversine UDF")
+        print(" Registered Haversine UDF")
 
         # Add distance column
         data = data.withColumn("distance_km", haversine_udf(
@@ -196,10 +196,10 @@ class Distance:
         # Analyze results
         null_distances = data.filter(data.distance_km.isNull()).count()
         valid_distances = data.count() - null_distances
-        print(f"\n📊 Distance calculation results:")
-        print(f"  ✅ Valid distances:   {valid_distances} rows")
-        print(f"  ❌ Null distances:    {null_distances} rows")
-        print(f"  🧮 Total rows:        {data.count()} rows")
+        print(f"\n Distance calculation results:")
+        print(f"   Valid distances:   {valid_distances} rows")
+        print(f"   Null distances:    {null_distances} rows")
+        print(f"   Total rows:        {data.count()} rows")
         return data
 
 
@@ -208,8 +208,8 @@ class PreHarmonizer:
 
     def __init__(self, currentio: DataLakeIO):
         self.currentio = currentio
-        print(f"✅ PreHarmonizer initialized | Key column: {self._KEY_COLUMN}")
-        print(f"  📁 Data source: {currentio.filepath()}")
+        print(f" PreHarmonizer initialized | Key column: {self._KEY_COLUMN}")
+        print(f"   Data source: {currentio.filepath()}")
 
     def preharmonize(self, sourcedata: DataFrame, spark: SparkSession):
         print("\n" + "=" * 80)
@@ -217,7 +217,7 @@ class PreHarmonizer:
         print("=" * 80)
 
         # Load current keys
-        print("⏳ Loading current dataset keys...")
+        print(" Loading current dataset keys...")
         dataloader = DataLoader(
             path=self.currentio.filepath(),
             filetype='delta'
@@ -225,11 +225,11 @@ class PreHarmonizer:
         current_keys = dataloader.LoadData(spark)
 
         # Show key metrics
-        print(f"🔑 Current keys loaded: {current_keys.count()} records")
-        print(f"📊 Source data: {sourcedata.count()} records")
+        print(f" Current keys loaded: {current_keys.count()} records")
+        print(f" Source data: {sourcedata.count()} records")
 
         # Perform anti-join
-        print(f"\n🔍 Filtering source data using left anti-join on '{self._KEY_COLUMN}'...")
+        print(f"\n Filtering source data using left anti-join on '{self._KEY_COLUMN}'...")
         filtered_data = sourcedata.join(
             current_keys,
             on=self._KEY_COLUMN,
@@ -240,15 +240,15 @@ class PreHarmonizer:
         removed_count = sourcedata.count() - filtered_data.count()
         retention_rate = filtered_data.count() / sourcedata.count() * 100
 
-        print("\n📊 Pre-harmonization results:")
-        print(f"  🧮 Source rows:          {sourcedata.count()}")
-        print(f"  🚫 Removed duplicates:   {removed_count}")
-        print(f"  ✅ Filtered rows:        {filtered_data.count()}")
-        print(f"  📈 Retention rate:       {retention_rate:.2f}%")
+        print("\n Pre-harmonization results:")
+        print(f"   Source rows:          {sourcedata.count()}")
+        print(f"   Removed duplicates:   {removed_count}")
+        print(f"   Filtered rows:        {filtered_data.count()}")
+        print(f"   Retention rate:       {retention_rate:.2f}%")
 
         if filtered_data.count() > 0:
             sample_keys = filtered_data.select(self._KEY_COLUMN).limit(5).collect()
-            print(f"\n🔑 Sample new keys:")
+            print(f"\n Sample new keys:")
             for i, row in enumerate(sample_keys, 1):
                 print(f"  {i}. {row[self._KEY_COLUMN]}")
 

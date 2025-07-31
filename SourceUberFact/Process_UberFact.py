@@ -13,8 +13,8 @@ spark = create_spark_session()
 '''
 Fact Tables - uberfares , tripdetails
 '''
-sourceobject = "uberfares"
-loadtype = "full"
+sourceobject = "tripdetails"
+loadtype = "delta"
 sourceschema = sourceschema(sourcedefinition=sourceobject)
 
 loadio = DataLakeIO(
@@ -41,8 +41,8 @@ currentio = DataLakeIO(
     process="write",
     table=sourceobject,
     state='current',
-    loadtype=loadtype,
-    runtype='dev'
+    layer='raw',
+    loadtype=loadtype
 )
 datawriter = DataWriter(
     loadtype=loadtype,

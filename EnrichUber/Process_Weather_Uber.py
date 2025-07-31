@@ -12,9 +12,11 @@ weatherschema = WeatherSchema()
 loadtype = 'delta'
 
 readio = DataLakeIO(
-    process='readraw',
-    sourceobject=sourcedefinition,
-    state='current'
+    process='read',
+    table=sourcedefinition,
+    state='current',
+    loadtype='full',
+    layer='raw'
 )
 dataloader = DataLoader(
     path=readio.filepath(),
@@ -24,8 +26,10 @@ rawdata = dataloader.LoadData(spark)
 
 currentio = DataLakeIO(
     process="enrichweather",
-    sourceobject=sourcedefinition,
-    state='current'
+    table=sourcedefinition,
+    state='current',
+    loadtype='full',
+    layer='enrich'
 )
 preharmonizer = PreHarmonizer(
     currentio=currentio

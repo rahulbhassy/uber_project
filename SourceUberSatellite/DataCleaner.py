@@ -22,9 +22,11 @@ class DataCleaner:
     def _preharmonise(self,sourcedata: DataFrame):
 
         currentio=DataLakeIO(
-            process="write",
-            sourceobject=self.sourceobject,
-            state='current'
+            process="read",
+            table=self.sourceobject,
+            state='current',
+            layer='raw',
+            loadtype=self.loadtype
         )
         dataloader = DataLoader(
             path=currentio.filepath(),

@@ -26,7 +26,7 @@ class DataLakeIO:
     # centralized layer‐to‐path mapping
     _LAYER_MAP = {
         'raw': {
-            'features': ['Raw', 'boroughs', 'newyork', 'features'],
+            'features': ['Raw', 'boroughs', 'newyork'],
             '__default__': ['Raw']
         },
         'input': {
@@ -65,7 +65,7 @@ class DataLakeIO:
             return cfg['features']
         if self.layer == 'enrich' and self.table == 'uber':
             return cfg['uber']
-        if self.layer == 'enrich' and self.table == 'uberfares':
+        if self.layer == 'enrich' and self.table == 'uberfares' and self.process == 'enrichweather':
             return cfg['uberfares|enrichweather']
         # fallback
         return cfg.get('__default__', [])
@@ -76,7 +76,7 @@ class DataLakeIO:
                 return 'csv'
             if self.table.endswith(self._INPUT_SUFFIX):
                 return 'geojson'
-        if self.process in ('read', 'write'):
+        if self.process in ('read', 'write','enrichweather'):
             return 'delta' if self.state == 'current' else 'parquet'
 
     def _build_path(self, parts: List[str]) -> str:
@@ -87,6 +87,10 @@ class DataLakeIO:
     def filepath(self, date: Optional[str] = None) -> str:
         ext = self.file_ext()
 
+        if self.table.endswith(self._INPUT_SUFFIX):
+            parts = self._get_layer_parts() + [self.table]
+            return self._build_path(parts)
+
         if self.process == 'load':
             if self.table in self._RAW_TABLES:
                 # YYYY‑MM‑DD
@@ -96,13 +100,9 @@ class DataLakeIO:
                 # delta or default
                 return self._build_path(['DataSource', folder, f"{self.table}.csv"])
 
-            if self.table.endswith(self._INPUT_SUFFIX):
-                parts = self._get_layer_parts() + [self.table]
-                return self._build_path(parts)
-
             raise ValueError(f"Can't load table '{self.table}' in process 'load'")
 
-        if self.process in ('read', 'write'):
+        if self.process in ('read', 'write','enrichweather'):
             parts = self._get_layer_parts()
             if self.state == 'current':
                 parts = parts + [self.table, self.state, f"{self.table}.{ext}"]
@@ -113,6 +113,53 @@ class DataLakeIO:
 
         raise ValueError(f"Unknown process '{self.process}'")
 
+class IntermediateIO:
+    _TABLES = frozenset([
+        "uberfares", "tripdetails", "driverdetails",
+        "customerdetails", "vehicledetails", "uber","features"
+    ])
+
+    def __init__(self, fullpath: str, date: str = None):
+        self.fullpath = Path(fullpath)
+        self.date = date
+        # derive sourceobject once
+        self.sourceobject = self._derive_sourceobject()
+
+    def _derive_sourceobject(self) -> str:
+        """
+        Peel off the DATALAKE_PREFIX and pick the first TABLE name we hit.
+        """
+        dlprefix = Path(DATALAKE_PREFIX)
+        rel = self.fullpath.relative_to(dlprefix)
+        for part in rel.parts:
+            if part in self._TABLES:
+                return part
+        raise ValueError(f"No known table found in {self.fullpath}")
+
+    def _get_intermediate_path(self) -> Path:
+        """
+        Builds <DATALAKE_PREFIX>/.../<sourceobject> (with trailing slash).
+        """
+        dlprefix = Path(DATALAKE_PREFIX)
+        rel = self.fullpath.relative_to(dlprefix)
+        ipath = dlprefix
+        for part in rel.parts:
+            ipath = ipath / part
+            if part == self.sourceobject:
+                break
+        return ipath  # Note: no trailing slash here; Path handles it
+
+    def get_deltapath(self) -> str:
+        """
+        Returns a string path:
+          <intermediatepath>/delta/YYYY-MM-DD/<sourceobject>.parquet
+        """
+        ipath        = self._get_intermediate_path()
+        today_folder = datetime.now().strftime('%Y-%m-%d')
+        if self.date:
+            today_folder = self.date
+        delta_path   = ipath / "delta" / today_folder / f"{self.sourceobject}.parquet"
+        return str(delta_path)
 
 class GeoJsonIO:
     def __init__(self, input_filename: str, path: str, validator_func=None):
@@ -143,7 +190,12 @@ class GeoJsonIO:
         fixed_geojson = validator(geojson_input)
 
         output_filename = f"fixed_{self.input_filename}"
-        datalake_io = DataLakeIO(process='write', table=output_filename,loadtype='full')
+        datalake_io = DataLakeIO(
+            process='write',
+            table=output_filename,
+            loadtype='full',
+            layer='input'
+        )
         fixed_geojson_path = datalake_io.filepath()
 
         with open(fixed_geojson_path, 'w') as file:
