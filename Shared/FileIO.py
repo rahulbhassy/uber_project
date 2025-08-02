@@ -19,7 +19,7 @@ DATALAKE_PREFIX = r"C:\Users\HP\uber_project\Data"
 class DataLakeIO:
     _RAW_TABLES = frozenset({
         "uberfares", "tripdetails", "driverdetails",
-        "customerdetails", "vehicledetails", "features"
+        "customerdetails", "vehicledetails", "features" , "weatherdetails"
     })
     _INPUT_SUFFIX = ".geojson"
 
@@ -116,7 +116,7 @@ class DataLakeIO:
 class IntermediateIO:
     _TABLES = frozenset([
         "uberfares", "tripdetails", "driverdetails",
-        "customerdetails", "vehicledetails", "uber","features"
+        "customerdetails", "vehicledetails", "uber","features", "weatherdetails"
     ])
 
     def __init__(self, fullpath: str, date: str = None):
@@ -243,89 +243,108 @@ class DeltaLakeOps:
         print(f"Restored Delta table at {self.path} to version {version}.")
 
 
+import math
+from dash import Dash, dash_table, html, dcc, Input, Output, State
+import dash_bootstrap_components as dbc
+from pyspark.sql import DataFrame
+from pyspark.sql.functions import monotonically_increasing_id, row_number, col
+from pyspark.sql.window import Window
+from shapely.geometry import Point, Polygon, LineString
+from pyspark.sql import SparkSession
+
 class SparkTableViewer:
     """
-    Dash-based Spark DataFrame viewer.
-    If table name is 'spatial', handles geometry serialization.
+    Dash-based Spark DataFrame viewer with server-side pagination & virtualization for faster browser loads.
+    Handles optional 'spatial' geometry serialization.
     """
-
-    def __init__(self, df: DataFrame, table_name: str = '', limit: int = 500, page_size: int = 20):
+    def __init__(self, df: DataFrame, table_name: str = '', page_size: int = 20):
         if not hasattr(df, 'columns'):
             raise ValueError("Expected a PySpark DataFrame.")
 
-        self.df = df.limit(limit)
+        self.df = df
         self.columns = df.columns
         self.page_size = page_size
         self.table_name = table_name.lower()
 
-        # Choose the appropriate serialization
-        if self.table_name == 'spatial':
-            self.data = self._serialize_spatial_rows(self.df.collect(), self.columns)
-        else:
-            self.data = [row.asDict() for row in self.df.collect()]
-
-    def _serialize_spatial_value(self, val):
+    def _serialize_value(self, val):
         try:
-            if hasattr(val, 'toText'):  # Sedona geometry
+            if hasattr(val, 'toText'):
                 return val.toText()
-            elif isinstance(val, (Point, Polygon, LineString)):  # Shapely geometry
+            if isinstance(val, (Point, Polygon, LineString)):
                 return val.wkt
             return val
         except Exception:
             return str(val)
 
-    def _serialize_spatial_rows(self, rows, columns):
-        serialized = []
-        for row in rows:
-            serialized.append({
-                col: self._serialize_spatial_value(val)
-                for col, val in zip(columns, row)
-            })
-        return serialized
+    def _get_page(self, page_current, page_size):
+        # Add an index column for pagination
+        w = Window().orderBy(monotonically_increasing_id())
+        indexed = self.df.withColumn(
+            "__row_num",
+            row_number().over(w) - 1
+        )
+        start = page_current * page_size
+        end = start + page_size
+        # Use col() to reference column, not attribute
+        page_df = indexed.filter(
+            (col("__row_num") >= start) & (col("__row_num") < end)
+        ).drop("__row_num")
+        rows = page_df.collect()
 
-    def display(self, host='127.0.0.1', port=8050, debug=True):
-        """
-        Launch Dash app with styled DataTable inside a Bootstrap card.
-        """
+        # Serialize rows
+        result = []
+        for row in rows:
+            d = {}
+            for col_name, val in zip(self.columns, row):
+                if self.table_name == 'spatial':
+                    d[col_name] = self._serialize_value(val)
+                else:
+                    d[col_name] = val
+            result.append(d)
+        return result
+
+    def display(self, host='127.0.0.1', port=8050, debug=False):
         app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
         table = dash_table.DataTable(
+            id='spark-table',
             columns=[{"name": c, "id": c} for c in self.columns],
-            data=self.data,
+            page_current=0,
             page_size=self.page_size,
-            filter_action="native",
-            sort_action="native",
+            page_action='custom',
+            virtualization=True,
             style_table={
                 'overflowX': 'auto',
                 'overflowY': 'auto',
                 'maxHeight': 'calc(100vh - 200px)',
-                'height': '100%',
                 'width': '100%',
             },
             style_header={
-                'backgroundColor': '#004085',
-                'color': 'white',
-                'fontWeight': 'bold',
-                'textAlign': 'center',
-                'position': 'sticky',
-                'top': 0,
-                'zIndex': 1,
+                'backgroundColor': '#004085', 'color': 'white',
+                'fontWeight': 'bold', 'textAlign': 'center',
+                'position': 'sticky', 'top': 0, 'zIndex': 1,
             },
             style_cell={
-                'textAlign': 'left',
-                'padding': '5px',
-                'minWidth': '100px',
-                'whiteSpace': 'normal',
+                'textAlign': 'left', 'padding': '5px',
+                'minWidth': '100px', 'whiteSpace': 'normal',
             },
-            style_data_conditional=[
-                {'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'}
-            ]
+            style_data_conditional=[{'if': {'row_index': 'odd'}, 'backgroundColor': '#f8f9fa'}]
         )
 
-        card = Card([
+        card = dbc.Card([
             html.H4("Spark DataFrame Viewer", className="card-title p-2 text-white bg-primary"),
-            CardBody(table)
+            dbc.CardBody(table)
         ], className="m-4 shadow-sm")
 
         app.layout = html.Div([card], className="bg-light vh-100")
+
+        @app.callback(
+            Output('spark-table', 'data'),
+            Input('spark-table', 'page_current'),
+            Input('spark-table', 'page_size')
+        )
+        def update_table(page_current, page_size):
+            return self._get_page(page_current, page_size)
+
         app.run(host=host, port=port, debug=debug)
+

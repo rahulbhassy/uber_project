@@ -1,35 +1,21 @@
 from Shared.FileIO import DataLakeIO
+from Shared.DataLoader import DataLoader
+from Shared.FileIO import SparkTableViewer
+from Shared.sparkconfig import create_spark_session
+from Shared.pyspark_env import setVEnv
 
-loadio = DataLakeIO(
-    process='load',
-    table='uberfares',
-    loadtype='full'
-)
-print(loadio.filepath())
-
-readio = DataLakeIO(
+setVEnv()
+reader = DataLakeIO(
     process='read',
-    table='uberfares',
-    loadtype='full',
+    table='customerdetails',
     state='current',
-    layer= 'raw'
-)
-print(readio.filepath())
-readio = DataLakeIO(
-    process='read',
-    table='uberfares',
+    layer='raw',
     loadtype='full',
-    state='delta',
-    layer= 'raw'
 )
-print(readio.filepath())
 
-readio = DataLakeIO(
-    process='read',
-    table='uberfares',
-    loadtype='full',
-    state='current',
-    layer= 'enrich',
-    runtype='dev'
+dataloader = DataLoader(
+    path=reader.filepath(),
+    filetype='delta',
 )
-print(readio.filepath())
+df = dataloader.LoadData(spark=create_spark_session())
+print(df.count())

@@ -10,21 +10,11 @@ from DGFunctions import (
     GetData, DataGenerator, Combiner, TripGenerator, DataSaver
 )
 
-
-def generate_new_data(fake, max_customer_id, max_driver_id, num_customers=35, num_drivers=12, num_vehicles=7):
-    """Generate new customer, driver, and vehicle data"""
-    generator = DataGenerator(fake, max_customer_id, max_driver_id)
-    return {
-        'customers': generator.generate_new_customers(num_customers),
-        'drivers': generator.generate_new_drivers(num_drivers),
-        'vehicles': generator.generate_new_vehicles(num_vehicles)
-    }
-
-
 def main():
     print("Starting data generation process...")
+    Faker.seed(42)
     fake = Faker()
-    Faker.seed(42)  # For reproducible results
+      # For reproducible results
 
     # 1. Load existing data
     print("\n1. Loading existing data...")
@@ -45,14 +35,25 @@ def main():
 
     # 3. Generate new entities
     print("\n3. Generating new entities...")
-    new_data = generate_new_data(
-        fake=fake,
-        max_customer_id=max_customer_id,
-        max_driver_id=max_driver_id,
-        num_customers=105,
-        num_drivers=36,
-        num_vehicles=36
+    generator = DataGenerator(fake, max_customer_id, max_driver_id)
+
+    # Generate new customers and drivers first
+    new_customers = generator.generate_new_customers(200)
+    new_drivers = generator.generate_new_drivers(70)
+
+    # Get all driver IDs (existing + new)
+    new_driver_ids = [d['driver_id'] for d in new_drivers]
+
+    # Generate vehicles with driver assignments
+    new_vehicles = generator.generate_new_vehicles(
+        driver_ids=new_driver_ids  # Pass driver IDs for assignment
     )
+
+    new_data = {
+        'customers': new_customers,
+        'drivers': new_drivers,
+        'vehicles': new_vehicles
+    }
 
     # 4. Combine with existing data
     print("\n4. Combining with existing data...")

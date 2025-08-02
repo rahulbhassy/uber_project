@@ -36,13 +36,13 @@ def sourceschema(sourcedefinition: str) -> StructType:
             StructField("customer_type", StringType(), True),
             StructField("membership_status", StringType(), True),
             StructField("rating", DoubleType(), True),
-            StructField("total_trips", IntegerType(), True),
             StructField("preferred_payment", StringType(), True),
         ])
 
     if sd == "vehicledetails":
         return StructType([
             StructField("vehicle_no", StringType(), False),
+            StructField("driver_id", StringType(), False),
             StructField("model", StringType(), True),
             StructField("year", IntegerType(), True),
             StructField("color", StringType(), True),
