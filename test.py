@@ -10,9 +10,9 @@ spark = create_spark_session_sedona()
 SedonaContext.create(spark)
 reader = DataLakeIO(
     process='read',
-    table='uber',
+    table='features',
     state='current',
-    layer='enrich',
+    layer='raw',
     loadtype='full',
 )
 
@@ -21,5 +21,5 @@ dataloader = DataLoader(
     filetype='delta',
 )
 df = dataloader.LoadData(spark=spark)
-view = SparkTableViewer(df=df,table_name='spatial')
-view.display()
+print(df.count())
+df.show()

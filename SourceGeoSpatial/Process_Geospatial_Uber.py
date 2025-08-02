@@ -10,7 +10,7 @@ setVEnv()
 spark = create_spark_session_sedona()
 skip_validation = False
 input_file_name = 'new-york-city-boroughs.geojson'
-loadtype='full'
+loadtype='delta'
 validator = Validator()
 harmonizer = Harmonizer(
     validator=validator
@@ -50,8 +50,7 @@ currentio = DataLakeIO(
     table='features',
     state= 'current',
     loadtype= loadtype,
-    layer='raw',
-    runtype='dev'
+    layer='raw'
 )
 datawriter = DataWriter(
     loadtype=loadtype,

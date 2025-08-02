@@ -24,7 +24,9 @@ spark.sql(f"""
     CREATE OR REPLACE TEMP VIEW uber_trips AS
     SELECT *, 
         ST_Point(CAST(pickup_longitude AS Decimal(24,6)), 
-                 CAST(pickup_latitude AS Decimal(24,6))) AS pickup_point
+                 CAST(pickup_latitude AS Decimal(24,6))) AS pickup_point,
+        ST_Point(CAST(dropoff_longitude AS Decimal(24,6)), 
+                 CAST(dropoff_latitude AS Decimal(24,6))) AS dropoff_point,       
     FROM delta.`{uberpath}`
 """)
 
