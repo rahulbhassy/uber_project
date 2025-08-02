@@ -7,11 +7,10 @@ from Shared.pyspark_env import setVEnv
 setVEnv()
 reader = DataLakeIO(
     process='read',
-    table='weatherdetails',
+    table='customerdetails',
     state='current',
     layer='raw',
     loadtype='full',
-    runtype='dev'
 )
 
 dataloader = DataLoader(
@@ -19,4 +18,4 @@ dataloader = DataLoader(
     filetype='delta',
 )
 df = dataloader.LoadData(spark=create_spark_session())
-df.show()
+print(df.count())

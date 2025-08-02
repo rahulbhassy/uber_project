@@ -1,7 +1,7 @@
 import csv
 import random
 from faker import Faker
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta , date
 import os
 from typing import List, Any
 
@@ -84,11 +84,13 @@ class DataGenerator:
     def generate_new_customers(self, num_new_customers=50):
         new_customers = []
         customer_types = ['Regular', 'Premium', 'Corporate', 'Student']
-        membership_statuses = ['Active', 'Active', 'Active', 'Active', 'Inactive', 'Suspended']
+        membership_statuses = ['Active', 'Active', 'Active', 'Active','Active', 'Active', 'Active', 'Inactive', 'Suspended']
 
         for i in range(num_new_customers):
             customer_id = self.max_customer_id + i + 1
-            registration_date = self.fake.date_between(start_date='-5y', end_date='today')
+            start_date = date(2009, 1, 1)
+            end_date = date(2012, 12, 31)
+            registration_date = self.fake.date_between(start_date=start_date, end_date=end_date)
 
             new_customers.append({
                 'customer_id': customer_id,
@@ -101,7 +103,6 @@ class DataGenerator:
                 'customer_type': random.choice(customer_types),
                 'membership_status': random.choice(membership_statuses),
                 'rating': round(random.uniform(3.0, 5.0), 1),
-                'total_trips': 0,
                 'preferred_payment': random.choice(['Credit Card', 'Debit Card', 'Digital Wallet', 'Cash'])
             })
 
@@ -112,11 +113,12 @@ class DataGenerator:
     def generate_new_drivers(self, num_new_drivers=12):
         new_drivers = []
         experience_levels = ['Trainee', 'Junior', 'Senior', 'Expert', 'Master']
-        driver_statuses = ['Active', 'Active', 'Active', 'Active', 'Active', 'On Leave', 'Inactive']
-
+        driver_statuses = ['Active', 'Active', 'Active', 'Active', 'Active','Active', 'Active', 'Active', 'Active', 'Active', 'On Leave', 'Inactive']
+        start_date = date(2009, 1, 1)
+        end_date = date(2012, 12, 31)
         for i in range(num_new_drivers):
             driver_id = self.max_driver_id + i + 1
-            hire_date = self.fake.date_between(start_date='-2y', end_date='today')
+            hire_date = self.fake.date_between(start_date=start_date, end_date=end_date)
 
             new_drivers.append({
                 'driver_id': driver_id,
@@ -137,46 +139,57 @@ class DataGenerator:
             f"Generated {len(new_drivers)} new drivers (IDs: {self.max_driver_id + 1} to {self.max_driver_id + num_new_drivers})")
         return new_drivers
 
-    def generate_new_vehicles(self, num_new_vehicles=7):
+    def generate_new_vehicles(self,driver_ids):
         new_vehicles = []
         vehicle_models = [
             'Toyota Camry', 'Honda Civic', 'Ford F-150', 'Chevrolet Silverado',
             'Tesla Model 3', 'Nissan Altima', 'Hyundai Elantra', 'BMW 3 Series',
             'Audi A4', 'Mercedes-Benz C-Class', 'Volkswagen Jetta', 'Subaru Outback',
             'Mazda CX-5', 'Jeep Wrangler', 'GMC Sierra', 'Ram 1500',
-            'Tesla Model S', 'Lexus ES', 'Acura TLX', 'Infiniti Q50'
+            'Tesla Model S', 'Lexus ES', 'Acura TLX', 'Infiniti Q50',
+            # New York taxi‐specific models
+            'Toyota Prius', 'Nissan NV200', 'Ford Transit Connect', 'Chevrolet Impala',
+            'Honda Accord', 'Toyota Sienna', 'Chrysler Pacifica', 'Ford Escape',
+            'Kia Optima', 'Hyundai Sonata', 'Lincoln Town Car', 'Cadillac XTS',
+            'Mercedes-Benz Sprinter'
         ]
-        vehicle_types = ['Sedan', 'SUV', 'Hatchback', 'Pickup Truck', 'Electric', 'Luxury']
+        vehicle_types = ['Sedan', 'SUV', 'Hatchback', 'Pickup Truck', 'Electric', 'Luxury', 'Minivan', 'Van']
         fuel_types = ['Gasoline', 'Electric', 'Hybrid', 'Diesel']
-        vehicle_statuses = ['Active', 'Active', 'Active', 'Maintenance', 'Out of Service']
-
-        for _ in range(num_new_vehicles):
+        vehicle_statuses = ['Active','Active', 'Active', 'Active', 'Active', 'Active', 'Maintenance', 'Out of Service']
+        # Ensure we have enough unique vehicle models
+        start_date = date(2009, 1, 1)
+        end_date = date(2015, 12, 31)
+        start_m_date = date(2012,1,1)
+        for driver_id in driver_ids:
             model = random.choice(vehicle_models)
-            year = random.randint(2015, 2024)
+            year = random.randint(2009, 2015)
 
+            # Fuel logic
             if 'Tesla' in model:
                 fuel_type = 'Electric'
-            elif random.random() < 0.2:
+            elif 'Prius' in model or random.random() < 0.2:
                 fuel_type = 'Hybrid'
             else:
-                fuel_type = random.choice(['Gasoline', 'Diesel'])
-
+                # fallback to any fuel type
+                fuel_type = random.choice(fuel_types)
+            # Generate vehicle details
             new_vehicles.append({
                 'vehicle_no': self.fake.unique.license_plate(),
+                'driver_id': driver_id,
                 'model': model,
                 'year': year,
                 'color': self.fake.color_name(),
                 'vehicle_type': random.choice(vehicle_types),
                 'fuel_type': fuel_type,
-                'seating_capacity': random.choice([4, 5, 7, 8]),
-                'mileage': random.randint(15000, 150000),
-                'insurance_expiry': self.fake.date_between(start_date='today', end_date='+2y'),
-                'last_maintenance': self.fake.date_between(start_date='-6m', end_date='today'),
+                'seating_capacity': random.choice([4, 5, 6, 7, 8]),
+                'mileage': random.randint(15000, 200000),
+                'insurance_expiry': self.fake.date_between(start_date=start_date, end_date=end_date),
+                'last_maintenance': self.fake.date_between(start_date=start_m_date, end_date=end_date),
                 'status': random.choice(vehicle_statuses),
                 'registration_state': self.fake.state_abbr()
             })
 
-        print(f"Generated {len(new_vehicles)} new vehicles")
+        print(f"Generated {len(new_vehicles)} vehicles for {len(driver_ids)} drivers")
         return new_vehicles
 
 
@@ -298,7 +311,7 @@ class TripGenerator:
     def generate_trip_details(self, trip_ids):
         """Generate trip details using combined customer/driver/vehicle pools"""
         trip_details = []
-        trip_statuses = ['Completed', 'Completed', 'Completed', 'Completed', 'Cancelled', 'No Show']
+        trip_statuses = ['Completed', 'Completed', 'Completed', 'Completed','Completed', 'Completed', 'Completed', 'Completed', 'Cancelled', 'No Show']
         payment_methods = ['Credit Card', 'Debit Card', 'Cash', 'Digital Wallet', 'Corporate Account']
 
         for trip_id in trip_ids:
@@ -313,9 +326,7 @@ class TripGenerator:
             self.vehicle_usage[vehicle['vehicle_no']] = self.vehicle_usage.get(vehicle['vehicle_no'], 0) + 1
 
             # Generate realistic trip data
-            trip_date = self.fake.date_time_between(start_date='-30d', end_date='now')
             distance = round(random.uniform(0.5, 50.0), 2)
-            duration = random.randint(5, 120)
             base_fare = round(distance * random.uniform(1.5, 3.0), 2)
             tip_amount = round(base_fare * random.uniform(0, 0.25), 2)
 
@@ -323,17 +334,9 @@ class TripGenerator:
                 'trip_id': trip_id,
                 'driver_id': driver['driver_id'],
                 'customer_id': customer['customer_id'],
-                'vehicle_no': vehicle['vehicle_no'],
-                'driver_name': driver['driver_name'],
-                'customer_name': customer['customer_name'],
-                'trip_date': trip_date.strftime('%Y-%m-%d %H:%M:%S'),
                 'pickup_location': self.fake.address().replace('\n', ', '),
                 'dropoff_location': self.fake.address().replace('\n', ', '),
-                'distance_miles': distance,
-                'duration_minutes': duration,
-                'fare_amount': base_fare,
                 'tip_amount': tip_amount,
-                'total_amount': round(base_fare + tip_amount, 2),
                 'payment_method': random.choice(payment_methods),
                 'trip_status': random.choice(trip_statuses),
                 'customer_rating': random.choice([None, 3, 4, 4, 5, 5, 5]),
@@ -353,7 +356,6 @@ import csv
 from datetime import datetime
 from tabulate import tabulate
 
-
 class DataSaver:
     # Base path for all generated data
     _BASE_PATH = 'C:/Users/HP/uber_project/Data/DataSource'
@@ -370,12 +372,10 @@ class DataSaver:
         """
         Initialize DataSaver with dated output directory and fixed filenames
         """
-        # Create date-based directory path (format: YYYY-MM-DD)
         self.date_str = datetime.now().strftime("%Y-%m-%d")
         self.output_path = os.path.join(self._BASE_PATH, self.date_str)
         self.report_data = []
 
-        # Create output directory if it doesn't exist
         os.makedirs(self.output_path, exist_ok=True)
         print(f"Data will be saved to: {self.output_path}")
 
@@ -383,14 +383,11 @@ class DataSaver:
         """Write data to CSV file with error handling"""
         try:
             full_path = os.path.join(self.output_path, filename)
-
-            # Write data to CSV
             with open(full_path, 'w', newline='', encoding='utf-8') as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(data)
 
-            # Record success for reporting
             self.report_data.append({
                 'file': filename,
                 'records': len(data),
@@ -399,7 +396,6 @@ class DataSaver:
             })
             return True
         except Exception as e:
-            # Record failure for reporting
             self.report_data.append({
                 'file': filename,
                 'records': 0,
@@ -408,11 +404,18 @@ class DataSaver:
             })
             return False
 
-    def save_all(self, new_customers, new_drivers, new_vehicles, trip_details):
-        """Save all generated data to CSV files with fixed filenames"""
+    def save_all(self,
+                 new_vehicles=None,
+                 new_customers=None,
+                 new_drivers=None,
+                 trip_details=None):
+        """
+        Save vehicles (mandatory) and optionally customers, drivers, trips.
+        Returns True if all attempted writes succeed.
+        """
         results = []
 
-        # Define field mappings for each entity type
+        # field mappings
         field_mappings = {
             'customers': [
                 'customer_id', 'customer_name', 'phone_no', 'email', 'address',
@@ -425,38 +428,53 @@ class DataSaver:
                 'rating', 'status', 'emergency_contact'
             ],
             'vehicles': [
-                'vehicle_no', 'model', 'year', 'color', 'vehicle_type',
+                'vehicle_no', 'driver_id', 'model', 'year', 'color', 'vehicle_type',
                 'fuel_type', 'seating_capacity', 'mileage', 'insurance_expiry',
                 'last_maintenance', 'status', 'registration_state'
             ],
             'trips': [
-                'trip_id', 'driver_id', 'customer_id', 'vehicle_no', 'driver_name',
-                'customer_name', 'trip_date', 'pickup_location', 'dropoff_location',
-                'distance_miles', 'duration_minutes', 'fare_amount', 'tip_amount',
-                'total_amount', 'payment_method', 'trip_status', 'customer_rating',
+                'trip_id', 'driver_id', 'customer_id', 'pickup_location',
+                'dropoff_location', 'tip_amount','payment_method', 'trip_status',
+                'customer_rating',
                 'driver_rating'
             ]
         }
 
-        # Save each dataset if it exists
+        if new_vehicles:
+            results.append(
+                self.write_to_csv(
+                    self.FILENAMES['vehicles'],
+                    new_vehicles,
+                    field_mappings['vehicles']
+                )
+            )
+
+        # optional writes
         if new_customers:
             results.append(
-                self.write_to_csv(self.FILENAMES['customers'], new_customers, field_mappings['customers'])
+                self.write_to_csv(
+                    self.FILENAMES['customers'],
+                    new_customers,
+                    field_mappings['customers']
+                )
             )
 
         if new_drivers:
             results.append(
-                self.write_to_csv(self.FILENAMES['drivers'], new_drivers, field_mappings['drivers'])
-            )
-
-        if new_vehicles:
-            results.append(
-                self.write_to_csv(self.FILENAMES['vehicles'], new_vehicles, field_mappings['vehicles'])
+                self.write_to_csv(
+                    self.FILENAMES['drivers'],
+                    new_drivers,
+                    field_mappings['drivers']
+                )
             )
 
         if trip_details:
             results.append(
-                self.write_to_csv(self.FILENAMES['trips'], trip_details, field_mappings['trips'])
+                self.write_to_csv(
+                    self.FILENAMES['trips'],
+                    trip_details,
+                    field_mappings['trips']
+                )
             )
 
         return all(results)
@@ -469,7 +487,7 @@ class DataSaver:
 
         headers = ["File", "Records", "Status", "Details"]
 
-        # Add totals row
+        # totals
         total_records = sum(item['records'] for item in self.report_data)
         self.report_data.append({
             'file': 'TOTAL',
@@ -478,33 +496,24 @@ class DataSaver:
             'message': f"{len(self.report_data) - 1} files generated"
         })
 
-        # Format report as table
         table_data = [
             [item['file'], item['records'], item['status'], item['message']]
             for item in self.report_data
         ]
+        report = tabulate(table_data,
+                          headers=headers,
+                          tablefmt="fancy_grid",
+                          numalign="right",
+                          stralign="left")
 
-        report = tabulate(
-            table_data,
-            headers=headers,
-            tablefmt="fancy_grid",
-            numalign="right",
-            stralign="left"
-        )
-
-        # Add timestamp header
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         header = f"DATA GENERATION REPORT ({timestamp})"
         separator = "=" * len(header)
-
         full_report = f"\n{separator}\n{header}\n{separator}\n\n{report}\n"
+
         print(full_report)
 
-        # Save report to file
-        report_filename = os.path.join(
-            self.output_path,
-            f"generation_report.txt"
-        )
+        report_filename = os.path.join(self.output_path, "generation_report.txt")
         with open(report_filename, 'w') as f:
             f.write(full_report)
 

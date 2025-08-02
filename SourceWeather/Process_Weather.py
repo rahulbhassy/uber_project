@@ -8,10 +8,10 @@ from Shared.DataWriter import DataWriter
 
 
 setVEnv()
-loadtype = 'full'
+loadtype = 'delta'
 table = 'weatherdetails'
-startdate = '2009-01-01'
-enddate = '2009-03-31'
+startdate = '2021-01-01'
+enddate = '2024-12-31'
 spark = create_spark_session()
 
 init = Init(
@@ -29,7 +29,7 @@ weatherdetails = dataloader.load(
 
 currentio = DataLakeIO(
     process='write',
-    table='weatherdetails',
+    table=table,
     state='current',
     layer='raw',
     loadtype=loadtype

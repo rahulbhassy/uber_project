@@ -9,7 +9,7 @@ class DataCleaner:
     _KEY_COLUMNS = {
         "driverdetails": "driver_id",
         "customerdetails": "customer_id",
-        "vehicledetails": "vehicle_no",
+        "vehicledetails": "driver_id",
     }
 
     def __init__(self, sourceobject: str,loadtype: str ,spark: SparkSession=None):
