@@ -15,16 +15,38 @@ input_file_names = [
     'pennsylvania_municipalities.geojson',
     'rhode_island_municipalities.geojson',
     'quebec_municipalities.geojson',
-    'ontario_municipalities.geojson'
+    'ontario_municipalities.geojson',
+    'connecticut_outside_boroughs.geojson',
+    'massachusetts_outside_boroughs.geojson',
+    'new_jersey_outside_boroughs.geojson',
+    'new_york_outside_boroughs.geojson',
+    'ontario_outside_boroughs.geojson',
+    'pennsylvania_outside_boroughs.geojson',
+    'quebec_outside_boroughs.geojson',
+    'rhode_island_outside_boroughs.geojson',
+    'vermont_outside_boroughs.geojson'
 ]
 '''
 setVEnv()
 spark = create_spark_session_sedona()
 skip_validation = False
 input_file_names = [
+    'connecticut_municipalities.geojson',
+    'massachusetts_municipalities.geojson',
+    'new-york-city-boroughs.geojson',
+    'new_jersey_municipalities.geojson',
+    'pennsylvania_municipalities.geojson',
     'rhode_island_municipalities.geojson',
     'quebec_municipalities.geojson',
-    'ontario_municipalities.geojson'
+    'connecticut_outside_boroughs.geojson',
+    'massachusetts_outside_boroughs.geojson',
+    'new_jersey_outside_boroughs.geojson',
+    'new_york_outside_boroughs.geojson',
+    'ontario_outside_boroughs.geojson',
+    'pennsylvania_outside_boroughs.geojson',
+    'quebec_outside_boroughs.geojson',
+    'rhode_island_outside_boroughs.geojson',
+    'vermont_outside_boroughs.geojson'
 ]
 loadtype='delta'
 

@@ -10,9 +10,9 @@ spark = create_spark_session_sedona()
 SedonaContext.create(spark)
 reader = DataLakeIO(
     process='read',
-    table='uber',
+    table='features',
     state='current',
-    layer='enrich',
+    layer='raw',
     loadtype='full',
 )
 
