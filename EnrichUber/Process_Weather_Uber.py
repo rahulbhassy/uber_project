@@ -3,30 +3,47 @@ from Shared.pyspark_env import setEnv
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
-from Schema import WeatherSchema
+from EnrichUber.Schema import weather_schema
 from Harmonization import WeatherAPI,PreHarmonizer
+
 setEnv()
 spark = create_spark_session()
-sourcedefinition = "uberfares"
-weatherschema = WeatherSchema()
+uber = "uberfares"
+weather = "weatherdetails"
+weatherschema = weather_schema
 loadtype = 'delta'
+
+
 
 readio = DataLakeIO(
     process='read',
-    table=sourcedefinition,
+    table=uber,
     state='current',
     loadtype='full',
     layer='raw'
 )
-dataloader = DataLoader(
+reader = DataLoader(
     path=readio.filepath(),
     filetype='delta'
 )
-rawdata = dataloader.LoadData(spark)
+uberdata = reader.LoadData(spark)
+
+readio = DataLakeIO(
+    process='read',
+    table=weather,
+    state='current',
+    loadtype='full',
+    layer='raw'
+)
+reader = DataLoader(
+    path=readio.filepath(),
+    filetype='delta'
+)
+weatherdata = reader.LoadData(spark)
 
 currentio = DataLakeIO(
     process="enrichweather",
-    table=sourcedefinition,
+    table=uber,
     state='current',
     loadtype='full',
     layer='enrich'

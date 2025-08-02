@@ -6,39 +6,125 @@ from pyspark.sql.functions import udf
 from pyspark.sql.types import DoubleType
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
+from datetime import datetime
 
 
 class WeatherAPI:
-
     def __init__(self, schema):
         self.schema = schema
         print("WeatherAPI initialized with schema:", str(schema))
 
-    # Function to fetch weather data with detailed logging
-    def fetch_weather(self, date, lat, lon):
+    def safe_avg(self, vals):
+        clean = [v for v in vals if v is not None]
+        return sum(clean) / len(clean) if len(clean) >= 12 else None
+
+    def _safe_mode(self, vals):
+        from collections import Counter
+        clean = [v for v in vals if v is not None]
+        if len(clean) < 12:
+            return None
+        return Counter(clean).most_common(1)[0][0]
+
+    def fetch_weather(self, date: str, lat: float, lon: float):
         import requests
+        """
+        Fetch hourly data for exactly one date,
+        then reduce it to a daily summary.
+        """
         try:
             print(f"\nFetching weather for {date}...")
-            url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={date}&end_date={date}&hourly=temperature_2m,precipitation&timezone=auto"
-            response = requests.get(url)
+            url = (
+                f"https://archive-api.open-meteo.com/v1/archive"
+                f"?latitude={lat}&longitude={lon}"
+                f"&start_date={date}&end_date={date}"
+                "&hourly=temperature_2m,precipitation,weather_code,"
+                "relative_humidity_2m,wind_speed_10m,cloudcover,snowfall"
+                "&timezone=auto"
+            )
 
-            if response.status_code == 200:
-                data = response.json()
-                temperatures = data["hourly"]["temperature_2m"]
-                precipitation = data["hourly"]["precipitation"]
-                avg_temp = sum(temperatures) / len(temperatures)
-                total_precipitation = sum(precipitation)
-                print(f" SUCCESS for {date}: Temp={avg_temp:.2f}C, Precip={total_precipitation}mm")
-                return {"date": date, "avg_temp": avg_temp, "precipitation": total_precipitation}
-            else:
-                print(f" HTTP ERROR for {date}: Status {response.status_code}")
-                return {"date": date, "avg_temp": None, "precipitation": None}
+            resp = requests.get(url, timeout=10)
+            if resp.status_code != 200:
+                print(f" HTTP ERROR {resp.status_code} for {date}")
+                return {
+                    "date": date,
+                    "avg_temp": None,
+                    "precipitation": None,
+                    "weather_code": None,
+                    "avg_humidity": None,
+                    "avg_wind_speed": None,
+                    "avg_cloud_cover": None,
+                    "avg_snow_fall": None
+                }
+
+            hourly = resp.json().get("hourly", {})
+            times = hourly.get("time", [])
+            if not times:
+                print(f" No hourly data for {date}")
+                # return same shape but empty
+                return {
+                    "date": date,
+                    "avg_temp": None,
+                    "precipitation": None,
+                    "weather_code": None,
+                    "avg_humidity": None,
+                    "avg_wind_speed": None,
+                    "avg_cloud_cover": None,
+                    "avg_snow_fall": None
+                }
+
+            # All indices for that single date
+            idxs = list(range(len(times)))
+            def extract(param, default=0):
+                vals = hourly.get(param, [])
+                return [vals[i] for i in idxs] if vals else [default] * len(idxs)
+
+            # Gather lists
+            temps = extract("temperature_2m", None)
+            prcp  = extract("precipitation", 0)
+            wcode = extract("weather_code", None)
+            rh    = extract("relative_humidity_2m", None)
+            wspd  = extract("wind_speed_10m", None)
+            cloud = extract("cloudcover", None)
+            snow  = extract("snowfall", 0)
+
+            # Summarize
+            avg_temp    = self.safe_avg(temps)
+            total_prcp  = sum(v for v in prcp if v is not None)
+            mode_code   = self._safe_mode(wcode)
+            avg_hum     = self.safe_avg(rh)
+            avg_wind    = self.safe_avg(wspd)
+            avg_cloud   = self.safe_avg(cloud)
+            avg_snow    = self.safe_avg(snow)
+
+            print(f" SUCCESS for {date}: AvgTemp={avg_temp}, TotalPrecip={total_prcp}, Code={mode_code}")
+
+            return {
+                "date": datetime.strptime(date, "%Y-%m-%d").date(),
+                "avg_temp": avg_temp,
+                "precipitation": total_prcp,
+                "weather_code": mode_code,
+                "avg_humidity": avg_hum,
+                "avg_wind_speed": avg_wind,
+                "avg_cloud_cover": avg_cloud,
+                "avg_snow_fall": avg_snow
+            }
 
         except Exception as e:
             print(f" EXCEPTION for {date}: {str(e)[:100]}")
-            return {"date": date, "avg_temp": None, "precipitation": None}
+            return {
+                "date": date,
+                "avg_temp": None,
+                "precipitation": None,
+                "weather_code": None,
+                "avg_humidity": None,
+                "avg_wind_speed": None,
+                "avg_cloud_cover": None,
+                "avg_snow_fall": None
+            }
 
     # Function to enrich Uber data with weather data
+    def harmonise(self, data: DataFrame, spark: SparkSession):
+
     def enrich(
             self,
             data: DataFrame,

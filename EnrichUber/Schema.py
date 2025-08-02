@@ -1,11 +1,16 @@
 from pyspark.sql.types import (
-    StructType, StructField, StringType,
-    DoubleType
+    StructType, StructField,
+    DateType, DoubleType, IntegerType
 )
 
-def WeatherSchema() -> StructType:
-    return StructType([
-        StructField("date", StringType(), nullable=False),        # accept as string
-        StructField("avg_temp", DoubleType(), nullable=True),
-        StructField("precipitation", DoubleType(), nullable=True),
-    ])
+weather_schema = StructType([
+    StructField("date", DateType(), True),
+    StructField("avg_temp", DoubleType(), True),
+    StructField("precipitation", DoubleType(), True),
+    StructField("weather_code", IntegerType(), True),
+    StructField("avg_humidity", DoubleType(), True),
+    StructField("avg_wind_speed", DoubleType(), True),
+    StructField("avg_cloud_cover", DoubleType(), True),
+    StructField("avg_snow_fall", DoubleType(), True),
+])
+
