@@ -4,22 +4,21 @@ from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
 from EnrichUber.Schema import weather_schema
-from Harmonization import WeatherAPI,PreHarmonizer
+from Harmonization import PreHarmonizer,Harmonizer
 
 setEnv()
 spark = create_spark_session()
 uber = "uberfares"
 weather = "weatherdetails"
 weatherschema = weather_schema
-loadtype = 'delta'
-
+loadtype = 'full'
 
 
 readio = DataLakeIO(
     process='read',
     table=uber,
     state='current',
-    loadtype='full',
+    loadtype=loadtype,
     layer='raw'
 )
 reader = DataLoader(
@@ -32,7 +31,7 @@ readio = DataLakeIO(
     process='read',
     table=weather,
     state='current',
-    loadtype='full',
+    loadtype=loadtype,
     layer='raw'
 )
 reader = DataLoader(
@@ -45,17 +44,24 @@ currentio = DataLakeIO(
     process="enrichweather",
     table=uber,
     state='current',
-    loadtype='full',
+    loadtype=loadtype,
     layer='enrich'
 )
-preharmonizer = PreHarmonizer(
-    currentio=currentio
+
+if loadtype == 'delta':
+    preharmonizer = PreHarmonizer(
+        currentio=currentio
+    )
+    uberdata = preharmonizer.preharmonize(sourcedata=uberdata, spark=spark)
+
+harmonizer = Harmonizer(
+    uberdata=uberdata,
+    weatherdata=weatherdata,
+    schema=weatherschema
 )
-enrichweather = WeatherAPI(schema=weatherschema)
-enriched_weather_data = enrichweather.enrich(
-    data=preharmonizer.preharmonize(sourcedata=rawdata,spark=spark),
-    spark=spark
-)
+enriched_weather_data = harmonizer.harmonize(spark=spark)
+
+
 datawriter = DataWriter(
     loadtype=loadtype,
     path=currentio.filepath(),

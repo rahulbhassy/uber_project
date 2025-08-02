@@ -18,5 +18,8 @@ dataloader = DataLoader(
     filetype='delta',
 )
 df = dataloader.LoadData(spark=create_spark_session())
+df = df.filter(
+
+)
 view = SparkTableViewer(df=df)
 view.display()

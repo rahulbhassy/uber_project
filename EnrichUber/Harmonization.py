@@ -3,7 +3,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql import SparkSession
 import math
 from pyspark.sql.functions import udf
-from pyspark.sql.types import DoubleType
+from pyspark.sql.types import DoubleType, StructType
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
 from datetime import datetime
@@ -122,8 +122,6 @@ class WeatherAPI:
                 "avg_snow_fall": None
             }
 
-    # Function to enrich Uber data with weather data
-    def harmonise(self, data: DataFrame, spark: SparkSession):
 
     def enrich(
             self,
@@ -205,7 +203,16 @@ class WeatherAPI:
             if date in successful_data:
                 weather_list.append(successful_data[date])
             else:
-                weather_list.append({"date": date, "avg_temp": None, "precipitation": None})
+                weather_list.append({
+                    "date": datetime.strptime(date, "%Y-%m-%d").date(),
+                    "avg_temp": None,
+                    "precipitation": None,
+                    "weather_code": None,
+                    "avg_humidity": None,
+                    "avg_wind_speed": None,
+                    "avg_cloud_cover": None,
+                    "avg_snow_fall": None
+                })
 
         # Create DataFrame
         print("\nBuilding weather DataFrame...")
@@ -214,25 +221,14 @@ class WeatherAPI:
 
         # Cast date to DateType and join
         weather_df = weather_df.withColumn("date", to_date("date", "yyyy-MM-dd"))
-        enriched_weather = data.join(weather_df, on="date", how="left")
 
-        # Filter out rows with missing weather data
-        final_count = enriched_weather.filter(
-            (enriched_weather.avg_temp.isNotNull()) &
-            (enriched_weather.precipitation.isNotNull())
-        ).count()
-
-        print("\n" + "=" * 80)
-        print("ENRICHMENT COMPLETE")
-        print("=" * 80)
-        print(f"  INITIAL ROWS:    {data.count()}")
-        print(f"  ENRICHED ROWS:   {final_count}")
-        print(f"  FILTERED ROWS:   {data.count() - final_count} (missing weather data)")
-
-        return enriched_weather.filter(
-            (enriched_weather.avg_temp.isNotNull()) &
-            (enriched_weather.precipitation.isNotNull())
+        enriched_data = data.join(
+            weather_df,
+            on="date",
+            how="left"
         )
+
+        return enriched_data
 
 
 import math
@@ -341,4 +337,71 @@ class PreHarmonizer:
         print("=" * 80 + "\n")
         return filtered_data
 
+from pyspark.sql.functions import col, lit
+from functools import reduce
 
+class Harmonizer:
+
+    def __init__(self,uberdata: DataFrame,weatherdata: DataFrame,schema: StructType):
+        self.uberdata = uberdata
+        self.weatherdata = weatherdata
+        self.schema = schema
+        print(" Harmonizer initialized")
+
+    def getNullDates(self, data: DataFrame):
+        # List all metric columns (everything except "date")
+        metrics = [
+            "avg_temp",
+            "precipitation",
+            "weather_code",
+            "avg_humidity",
+            "avg_wind_speed",
+            "avg_cloud_cover",
+            "avg_snow_fall"
+        ]
+
+        # Build the "all null" condition: col(a).isNull() & col(b).isNull() & …
+        all_null_condition = reduce(
+            lambda acc, c: acc & col(c).isNull(),
+            metrics,
+            lit(True)
+        )
+
+        # Null-only: all metrics are null
+        null_only_df = data.filter(all_null_condition).drop(*metrics)
+
+        # Valid: at least one metric is non-null
+        valid_condition = ~all_null_condition
+        valid_df = data.filter(valid_condition)
+
+        return null_only_df, valid_df
+
+    def harmonize(self,spark: SparkSession):
+        print("\n" + "=" * 80)
+        print("STARTING HARMONIZATION PROCESS")
+        print("=" * 80)
+
+        # Join Uber data with weather data
+        print(" Joining Uber data with weather data...")
+        enriched_data = self.uberdata.join(
+            self.weatherdata,
+            on="date",
+            how="left"
+        )
+        null_dates,enriched_data = self.getNullDates(data=enriched_data)
+        if null_dates.count() > 0:
+            print("\n WARNING: Found dates with missing weather data , Calling WeatherAPI to fill gaps...")
+            enrichweather = WeatherAPI(schema=self.schema)
+            filled_null_dates = enrichweather.enrich(
+                data=null_dates,
+                spark=spark
+            )
+            enriched_data = enriched_data.unionByName(filled_null_dates)
+
+        else:
+            print("\nAll dates have weather—no refill needed.")
+
+        print(f"\n Harmonization results:")
+        print(f"   Total rows after join: {enriched_data.count()}")
+
+        return enriched_data
