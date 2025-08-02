@@ -2,37 +2,48 @@ from pyspark.sql import DataFrame
 from pyspark.sql import SparkSession
 from datetime import datetime, timedelta
 from typing import Optional
+from Shared.FileIO import DataLakeIO
+from Shared.DataLoader import DataLoader
 
 
 class Init:
     def __init__(
         self,
         loadtype: str,
-        startdate: Optional[str] = None,
-        enddate: Optional[str] = None,
+        spark: SparkSession,
+        table:  str,
         date_format: str = '%Y-%m-%d'
     ):
         self.loadtype = loadtype.lower()
+        self.spark = spark
+        self.table = table
         self.date_format = date_format
 
-        # Parse string dates to datetime.date
-        if startdate:
-            try:
-                self.startdate = datetime.strptime(startdate, self.date_format).date()
-            except ValueError:
-                raise ValueError(f"startdate must match format {self.date_format}")
+        if self.loadtype == 'full':
+            self.startdate = datetime.strptime('2009-01-01',self.date_format).date()
         else:
-            self.startdate = None
+            readio = DataLakeIO(
+                process='read',
+                table=self.table,
+                state='current',
+                layer='raw',
+                loadtype=loadtype
+            )
+            reader = DataLoader(
+                path=readio.filepath(),
+                filetype='delta',
+                loadtype=loadtype
+            )
+            self.startdate = (
+                reader
+                .LoadData(spark=self.spark)
+                .selectExpr("max(date) AS max_date")
+                .first()["max_date"]
+            ) + timedelta(days=1)
 
-        if enddate:
-            try:
-                self.enddate = datetime.strptime(enddate, self.date_format).date()
-            except ValueError:
-                raise ValueError(f"enddate must match format {self.date_format}")
-        else:
-            self.enddate = None
+        self.enddate = datetime.now().date() - timedelta(days=1)
 
-    def Load(self, spark: SparkSession) -> DataFrame:
+    def Load(self) -> DataFrame:
         """
         Create a DataFrame with a date range for the specified load type.
 
@@ -43,42 +54,16 @@ class Init:
         print("INITIALISING DATE RANGE")
         print("=" * 80)
 
-        today_str = datetime.now().strftime(self.date_format)
-        yesterday_date = datetime.now().date() - timedelta(days=1)
-        yesterday_str = yesterday_date.strftime(self.date_format)
-
-        if self.loadtype == 'full':
-            # Historical full load requires both start and end
-            if not self.startdate or not self.enddate:
-                raise ValueError("Start and end dates must be provided for historical data.")
-            start_str = self.startdate.strftime(self.date_format)
-            end_str = self.enddate.strftime(self.date_format)
-            print(f" Creating date range from {start_str} to {end_str}")
-            num_days = (self.enddate - self.startdate).days + 1
-            date_range = (
-                spark.range(num_days)
-                     .selectExpr(f"date_add('{start_str}', cast(id as int)) as date")
-            )
-        else:
-            # Incremental load: from startdate through yesterday
-            if self.startdate:
-                start_str = self.startdate.strftime(self.date_format)
-                if self.startdate > yesterday_date:
-                    raise ValueError(
-                        f"Start date {start_str} is after yesterday {yesterday_str}."
-                    )
-                print(f" Creating date range from {start_str} to {yesterday_str}")
-                num_days = (yesterday_date - self.startdate).days + 1
-                date_range = (
-                    spark.range(num_days)
-                         .selectExpr(f"date_add('{start_str}', cast(id as int)) as date")
-                )
-            else:
-                # If no startdate, default to yesterday only
-                print(f" No startdate provided; defaulting to yesterday {yesterday_str}")
-                date_range = spark.createDataFrame(
-                    [(yesterday_str,)],
-                    ["date"]
-                )
+        # Historical full load requires both start and end
+        if not self.startdate or not self.enddate:
+            raise ValueError("Start and end dates must be provided for historical data.")
+        start_str = self.startdate.strftime(self.date_format)
+        end_str = self.enddate.strftime(self.date_format)
+        print(f" Creating date range from {start_str} to {end_str}")
+        num_days = (self.enddate - self.startdate).days + 1
+        date_range = (
+            self.spark.range(num_days)
+                .selectExpr(f"date_add('{start_str}', cast(id as int)) as date")
+        )
 
         return date_range

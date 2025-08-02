@@ -7,7 +7,7 @@ from Shared.pyspark_env import setVEnv
 setVEnv()
 reader = DataLakeIO(
     process='read',
-    table='customerdetails',
+    table='weatherdetails',
     state='current',
     layer='raw',
     loadtype='full',
@@ -18,4 +18,5 @@ dataloader = DataLoader(
     filetype='delta',
 )
 df = dataloader.LoadData(spark=create_spark_session())
-print(df.count())
+view = SparkTableViewer(df=df)
+view.display()
