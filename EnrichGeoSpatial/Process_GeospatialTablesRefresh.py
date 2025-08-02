@@ -26,7 +26,7 @@ spark.sql(f"""
         ST_Point(CAST(pickup_longitude AS Decimal(24,6)), 
                  CAST(pickup_latitude AS Decimal(24,6))) AS pickup_point,
         ST_Point(CAST(dropoff_longitude AS Decimal(24,6)), 
-                 CAST(dropoff_latitude AS Decimal(24,6))) AS dropoff_point,       
+                 CAST(dropoff_latitude AS Decimal(24,6))) AS dropoff_point       
     FROM delta.`{uberpath}`
 """)
 
@@ -51,12 +51,18 @@ spark.sql("""
     """)
 
 # Perform spatial analysis
-spatial_analysis = spark.sql("""
-        SELECT u.*, b.borough
-        FROM uber_trips u
-        JOIN boroughs_spatial b
-        ON ST_Within(u.pickup_point, b.geom)
-    """)
+enriched_uber = spark.sql("""
+    SELECT 
+        u.*, 
+        p.borough AS pickup_borough,
+        d.borough AS dropoff_borough
+    FROM uber_trips u
+    LEFT JOIN boroughs_spatial p 
+        ON ST_Within(u.pickup_point, p.geom)
+    LEFT JOIN boroughs_spatial d 
+        ON ST_Within(u.dropoff_point, d.geom)
+""")
+
 # Save the DataFrame as a Delta table (overwrite mode)
 currentio = DataLakeIO(
     process='write',
@@ -71,5 +77,5 @@ datawriter = DataWriter(
     format=currentio.file_ext(),
     spark=spark
 )
-datawriter.WriteData(df=spatial_analysis)
+datawriter.WriteData(df=enriched_uber)
 spark.stop()

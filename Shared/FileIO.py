@@ -33,7 +33,7 @@ class DataLakeIO:
             '__default__': ['Input', 'Borough']
         },
         'enrich': {
-            'uber': ['Enrich', 'Enriched', 'spatial', 'newyork'],
+            'uber': ['Enrich', 'Enriched', 'spatial'],
             'uberfares|enrichweather': ['Enrich', 'Enriched_Weather_uberData'],
             '__default__': ['Enrich', 'Enriched']
         }

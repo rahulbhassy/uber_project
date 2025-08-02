@@ -6,58 +6,77 @@ from Shared.DataWriter import DataWriter
 from Schema import geospatial_schema
 from GeospatialVH import Validator,Harmonizer
 
+'''
+input_file_names = [
+    'connecticut_municipalities.geojson',
+    'massachusetts_municipalities.geojson',
+    'new-york-city-boroughs.geojson',
+    'new_jersey_municipalities.geojson',
+    'pennsylvania_municipalities.geojson',
+    'rhode_island_municipalities.geojson',
+    'quebec_municipalities.geojson',
+    'ontario_municipalities.geojson'
+]
+'''
 setVEnv()
 spark = create_spark_session_sedona()
 skip_validation = False
-input_file_name = 'new-york-city-boroughs.geojson'
+input_file_names = [
+    'rhode_island_municipalities.geojson',
+    'quebec_municipalities.geojson',
+    'ontario_municipalities.geojson'
+]
 loadtype='delta'
-validator = Validator()
-harmonizer = Harmonizer(
-    validator=validator
-)
 
-if not skip_validation:
-    loadio = DataLakeIO(
-        process='load',
+for input_file_name in input_file_names:
+
+    validator = Validator()
+    harmonizer = Harmonizer(
+        validator=validator
+    )
+
+    if not skip_validation:
+        loadio = DataLakeIO(
+            process='load',
+            table=input_file_name,
+            loadtype=loadtype,
+            layer= 'input'
+        )
+        geojsonio = GeoJsonIO(
+            input_filename=input_file_name,
+            path=loadio.filepath()
+        )
+        input_file_name = geojsonio.validate_and_fix_geojson(
+            validator_func=validator.geojsonvalidator
+        )
+
+    readio = DataLakeIO(
+        process='read',
         table=input_file_name,
+        layer = 'input',
+        loadtype=loadtype
+    )
+    dataloader = DataLoader(
+        path=readio.filepath(),
+        schema=geospatial_schema(),
+        filetype='geojson'
+    )
+    boroughs_df = dataloader.LoadData(spark)
+
+    features_df = harmonizer.harmoniseboroughs(boroughs_df=boroughs_df)
+    currentio = DataLakeIO(
+        process='write',
+        table='features',
+        state= 'current',
+        loadtype= loadtype,
+        layer='raw'
+    )
+    datawriter = DataWriter(
         loadtype=loadtype,
-        layer= 'input'
+        path=currentio.filepath(),
+        format=currentio.file_ext(),
+        spark=spark
     )
-    geojsonio = GeoJsonIO(
-        input_filename=input_file_name,
-        path=loadio.filepath()
-    )
-    input_file_name = geojsonio.validate_and_fix_geojson(
-        validator_func=validator.geojsonvalidator
-    )
-
-readio = DataLakeIO(
-    process='read',
-    table=input_file_name,
-    layer = 'input',
-    loadtype=loadtype
-)
-dataloader = DataLoader(
-    path=readio.filepath(),
-    schema=geospatial_schema(),
-    filetype='geojson'
-)
-boroughs_df = dataloader.LoadData(spark)
-
-features_df = harmonizer.harmoniseboroughs(boroughs_df=boroughs_df)
-currentio = DataLakeIO(
-    process='write',
-    table='features',
-    state= 'current',
-    loadtype= loadtype,
-    layer='raw'
-)
-datawriter = DataWriter(
-    loadtype=loadtype,
-    path=currentio.filepath(),
-    format=currentio.file_ext(),
-    spark=spark
-)
-datawriter.WriteData(df=features_df)
+    datawriter.WriteData(df=features_df)
 
 spark.stop()
