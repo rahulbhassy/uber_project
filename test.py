@@ -22,7 +22,9 @@ dataloader = DataLoader(
 )
 df = dataloader.LoadData(spark=spark)
 df = df.filter(
-    (df.pickup_borough.isNotNull()) |
-    (df.dropoff_borough.isNotNull())
+    (df.pickupboroughsource == 'features') |
+    (df.dropoffboroughsource == 'features')
 )
 print("Without Nulls: ",df.count())
+viewer = SparkTableViewer(df=df,table_name='spatial')
+viewer.display()
