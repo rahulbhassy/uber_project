@@ -10,9 +10,9 @@ spark = create_spark_session_sedona()
 SedonaContext.create(spark)
 reader = DataLakeIO(
     process='read',
-    table='features',
+    table='uber',
     state='current',
-    layer='raw',
+    layer='enrich',
     loadtype='full',
 )
 
@@ -21,5 +21,8 @@ dataloader = DataLoader(
     filetype='delta',
 )
 df = dataloader.LoadData(spark=spark)
-view = SparkTableViewer(df=df,table_name='spatial')
-view.display()
+df = df.filter(
+    (df.pickup_borough.isNotNull()) |
+    (df.dropoff_borough.isNotNull())
+)
+print("Without Nulls: ",df.count())
