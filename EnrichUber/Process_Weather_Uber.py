@@ -3,42 +3,65 @@ from Shared.pyspark_env import setEnv
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
-from Schema import WeatherSchema
-from Harmonization import WeatherAPI,PreHarmonizer
+from EnrichUber.Schema import weather_schema
+from Harmonization import PreHarmonizer,Harmonizer
+
 setEnv()
 spark = create_spark_session()
-sourcedefinition = "uberfares"
-weatherschema = WeatherSchema()
-loadtype = 'delta'
+uber = "uberfares"
+weather = "weatherdetails"
+weatherschema = weather_schema
+loadtype = 'full'
+
 
 readio = DataLakeIO(
     process='read',
-    table=sourcedefinition,
+    table=uber,
     state='current',
-    loadtype='full',
+    loadtype=loadtype,
     layer='raw'
 )
-dataloader = DataLoader(
+reader = DataLoader(
     path=readio.filepath(),
     filetype='delta'
 )
-rawdata = dataloader.LoadData(spark)
+uberdata = reader.LoadData(spark)
+
+readio = DataLakeIO(
+    process='read',
+    table=weather,
+    state='current',
+    loadtype=loadtype,
+    layer='raw'
+)
+reader = DataLoader(
+    path=readio.filepath(),
+    filetype='delta'
+)
+weatherdata = reader.LoadData(spark)
 
 currentio = DataLakeIO(
     process="enrichweather",
-    table=sourcedefinition,
+    table=uber,
     state='current',
-    loadtype='full',
+    loadtype=loadtype,
     layer='enrich'
 )
-preharmonizer = PreHarmonizer(
-    currentio=currentio
+
+if loadtype == 'delta':
+    preharmonizer = PreHarmonizer(
+        currentio=currentio
+    )
+    uberdata = preharmonizer.preharmonize(sourcedata=uberdata, spark=spark)
+
+harmonizer = Harmonizer(
+    uberdata=uberdata,
+    weatherdata=weatherdata,
+    schema=weatherschema
 )
-enrichweather = WeatherAPI(schema=weatherschema)
-enriched_weather_data = enrichweather.enrich(
-    data=preharmonizer.preharmonize(sourcedata=rawdata,spark=spark),
-    spark=spark
-)
+enriched_weather_data = harmonizer.harmonize(spark=spark)
+
+
 datawriter = DataWriter(
     loadtype=loadtype,
     path=currentio.filepath(),

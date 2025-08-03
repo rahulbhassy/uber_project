@@ -3,42 +3,126 @@ from pyspark.sql import DataFrame
 from pyspark.sql import SparkSession
 import math
 from pyspark.sql.functions import udf
-from pyspark.sql.types import DoubleType
+from pyspark.sql.types import DoubleType, StructType
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
+from datetime import datetime
 
 
 class WeatherAPI:
-
     def __init__(self, schema):
         self.schema = schema
         print("WeatherAPI initialized with schema:", str(schema))
 
-    # Function to fetch weather data with detailed logging
-    def fetch_weather(self, date, lat, lon):
+    def safe_avg(self, vals):
+        clean = [v for v in vals if v is not None]
+        return sum(clean) / len(clean) if len(clean) >= 12 else None
+
+    def _safe_mode(self, vals):
+        from collections import Counter
+        clean = [v for v in vals if v is not None]
+        if len(clean) < 12:
+            return None
+        return Counter(clean).most_common(1)[0][0]
+
+    def fetch_weather(self, date: str, lat: float, lon: float):
         import requests
+        """
+        Fetch hourly data for exactly one date,
+        then reduce it to a daily summary.
+        """
         try:
             print(f"\nFetching weather for {date}...")
-            url = f"https://archive-api.open-meteo.com/v1/archive?latitude={lat}&longitude={lon}&start_date={date}&end_date={date}&hourly=temperature_2m,precipitation&timezone=auto"
-            response = requests.get(url)
+            url = (
+                f"https://archive-api.open-meteo.com/v1/archive"
+                f"?latitude={lat}&longitude={lon}"
+                f"&start_date={date}&end_date={date}"
+                "&hourly=temperature_2m,precipitation,weather_code,"
+                "relative_humidity_2m,wind_speed_10m,cloudcover,snowfall"
+                "&timezone=auto"
+            )
 
-            if response.status_code == 200:
-                data = response.json()
-                temperatures = data["hourly"]["temperature_2m"]
-                precipitation = data["hourly"]["precipitation"]
-                avg_temp = sum(temperatures) / len(temperatures)
-                total_precipitation = sum(precipitation)
-                print(f" SUCCESS for {date}: Temp={avg_temp:.2f}C, Precip={total_precipitation}mm")
-                return {"date": date, "avg_temp": avg_temp, "precipitation": total_precipitation}
-            else:
-                print(f" HTTP ERROR for {date}: Status {response.status_code}")
-                return {"date": date, "avg_temp": None, "precipitation": None}
+            resp = requests.get(url, timeout=10)
+            if resp.status_code != 200:
+                print(f" HTTP ERROR {resp.status_code} for {date}")
+                return {
+                    "date": date,
+                    "avg_temp": None,
+                    "precipitation": None,
+                    "weather_code": None,
+                    "avg_humidity": None,
+                    "avg_wind_speed": None,
+                    "avg_cloud_cover": None,
+                    "avg_snow_fall": None
+                }
+
+            hourly = resp.json().get("hourly", {})
+            times = hourly.get("time", [])
+            if not times:
+                print(f" No hourly data for {date}")
+                # return same shape but empty
+                return {
+                    "date": date,
+                    "avg_temp": None,
+                    "precipitation": None,
+                    "weather_code": None,
+                    "avg_humidity": None,
+                    "avg_wind_speed": None,
+                    "avg_cloud_cover": None,
+                    "avg_snow_fall": None
+                }
+
+            # All indices for that single date
+            idxs = list(range(len(times)))
+            def extract(param, default=0):
+                vals = hourly.get(param, [])
+                return [vals[i] for i in idxs] if vals else [default] * len(idxs)
+
+            # Gather lists
+            temps = extract("temperature_2m", None)
+            prcp  = extract("precipitation", 0)
+            wcode = extract("weather_code", None)
+            rh    = extract("relative_humidity_2m", None)
+            wspd  = extract("wind_speed_10m", None)
+            cloud = extract("cloudcover", None)
+            snow  = extract("snowfall", 0)
+
+            # Summarize
+            avg_temp    = self.safe_avg(temps)
+            total_prcp  = sum(v for v in prcp if v is not None)
+            mode_code   = self._safe_mode(wcode)
+            avg_hum     = self.safe_avg(rh)
+            avg_wind    = self.safe_avg(wspd)
+            avg_cloud   = self.safe_avg(cloud)
+            avg_snow    = self.safe_avg(snow)
+
+            print(f" SUCCESS for {date}: AvgTemp={avg_temp}, TotalPrecip={total_prcp}, Code={mode_code}")
+
+            return {
+                "date": datetime.strptime(date, "%Y-%m-%d").date(),
+                "avg_temp": avg_temp,
+                "precipitation": total_prcp,
+                "weather_code": mode_code,
+                "avg_humidity": avg_hum,
+                "avg_wind_speed": avg_wind,
+                "avg_cloud_cover": avg_cloud,
+                "avg_snow_fall": avg_snow
+            }
 
         except Exception as e:
             print(f" EXCEPTION for {date}: {str(e)[:100]}")
-            return {"date": date, "avg_temp": None, "precipitation": None}
+            return {
+                "date": date,
+                "avg_temp": None,
+                "precipitation": None,
+                "weather_code": None,
+                "avg_humidity": None,
+                "avg_wind_speed": None,
+                "avg_cloud_cover": None,
+                "avg_snow_fall": None
+            }
 
-    # Function to enrich Uber data with weather data
+
     def enrich(
             self,
             data: DataFrame,
@@ -119,7 +203,16 @@ class WeatherAPI:
             if date in successful_data:
                 weather_list.append(successful_data[date])
             else:
-                weather_list.append({"date": date, "avg_temp": None, "precipitation": None})
+                weather_list.append({
+                    "date": datetime.strptime(date, "%Y-%m-%d").date(),
+                    "avg_temp": None,
+                    "precipitation": None,
+                    "weather_code": None,
+                    "avg_humidity": None,
+                    "avg_wind_speed": None,
+                    "avg_cloud_cover": None,
+                    "avg_snow_fall": None
+                })
 
         # Create DataFrame
         print("\nBuilding weather DataFrame...")
@@ -128,25 +221,14 @@ class WeatherAPI:
 
         # Cast date to DateType and join
         weather_df = weather_df.withColumn("date", to_date("date", "yyyy-MM-dd"))
-        enriched_weather = data.join(weather_df, on="date", how="left")
 
-        # Filter out rows with missing weather data
-        final_count = enriched_weather.filter(
-            (enriched_weather.avg_temp.isNotNull()) &
-            (enriched_weather.precipitation.isNotNull())
-        ).count()
-
-        print("\n" + "=" * 80)
-        print("ENRICHMENT COMPLETE")
-        print("=" * 80)
-        print(f"  INITIAL ROWS:    {data.count()}")
-        print(f"  ENRICHED ROWS:   {final_count}")
-        print(f"  FILTERED ROWS:   {data.count() - final_count} (missing weather data)")
-
-        return enriched_weather.filter(
-            (enriched_weather.avg_temp.isNotNull()) &
-            (enriched_weather.precipitation.isNotNull())
+        enriched_data = data.join(
+            weather_df,
+            on="date",
+            how="left"
         )
+
+        return enriched_data
 
 
 import math
@@ -255,4 +337,71 @@ class PreHarmonizer:
         print("=" * 80 + "\n")
         return filtered_data
 
+from pyspark.sql.functions import col, lit
+from functools import reduce
 
+class Harmonizer:
+
+    def __init__(self,uberdata: DataFrame,weatherdata: DataFrame,schema: StructType):
+        self.uberdata = uberdata
+        self.weatherdata = weatherdata
+        self.schema = schema
+        print(" Harmonizer initialized")
+
+    def getNullDates(self, data: DataFrame):
+        # List all metric columns (everything except "date")
+        metrics = [
+            "avg_temp",
+            "precipitation",
+            "weather_code",
+            "avg_humidity",
+            "avg_wind_speed",
+            "avg_cloud_cover",
+            "avg_snow_fall"
+        ]
+
+        # Build the "all null" condition: col(a).isNull() & col(b).isNull() & …
+        all_null_condition = reduce(
+            lambda acc, c: acc & col(c).isNull(),
+            metrics,
+            lit(True)
+        )
+
+        # Null-only: all metrics are null
+        null_only_df = data.filter(all_null_condition).drop(*metrics)
+
+        # Valid: at least one metric is non-null
+        valid_condition = ~all_null_condition
+        valid_df = data.filter(valid_condition)
+
+        return null_only_df, valid_df
+
+    def harmonize(self,spark: SparkSession):
+        print("\n" + "=" * 80)
+        print("STARTING HARMONIZATION PROCESS")
+        print("=" * 80)
+
+        # Join Uber data with weather data
+        print(" Joining Uber data with weather data...")
+        enriched_data = self.uberdata.join(
+            self.weatherdata,
+            on="date",
+            how="left"
+        )
+        null_dates,enriched_data = self.getNullDates(data=enriched_data)
+        if null_dates.count() > 0:
+            print("\n WARNING: Found dates with missing weather data , Calling WeatherAPI to fill gaps...")
+            enrichweather = WeatherAPI(schema=self.schema)
+            filled_null_dates = enrichweather.enrich(
+                data=null_dates,
+                spark=spark
+            )
+            enriched_data = enriched_data.unionByName(filled_null_dates)
+
+        else:
+            print("\nAll dates have weather—no refill needed.")
+
+        print(f"\n Harmonization results:")
+        print(f"   Total rows after join: {enriched_data.count()}")
+
+        return enriched_data

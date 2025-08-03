@@ -26,14 +26,14 @@ class DataLakeIO:
     # centralized layer‐to‐path mapping
     _LAYER_MAP = {
         'raw': {
-            'features': ['Raw', 'boroughs', 'newyork'],
+            'features': ['Raw', 'boroughs'],
             '__default__': ['Raw']
         },
         'input': {
-            '__default__': ['Input', 'Borough', 'NewYork']
+            '__default__': ['Input', 'Borough']
         },
         'enrich': {
-            'uber': ['Enrich', 'Enriched', 'spatial', 'newyork'],
+            'uber': ['Enrich', 'Enriched', 'spatial'],
             'uberfares|enrichweather': ['Enrich', 'Enriched_Weather_uberData'],
             '__default__': ['Enrich', 'Enriched']
         }
