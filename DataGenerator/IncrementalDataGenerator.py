@@ -6,7 +6,7 @@ import os
 from pyspark.sql import DataFrame
 
 # Import all required classes from the previous code
-from DGFunctions import (
+from DataGenerator.DGFunctions import (
     GetData, DataGenerator, Combiner, TripGenerator, DataSaver
 )
 
