@@ -1,5 +1,5 @@
 from sedona.spark import SedonaContext
-from Shared.sparkconfig import create_spark_session
+from Shared.sparkconfig import create_spark_session_sedona
 from Shared.pyspark_env import setVEnv
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import SparkTableViewer
@@ -7,10 +7,10 @@ from Shared.FileIO import DataLakeIO
 from pyspark.sql.functions import date_format
 
 setVEnv()
-spark = create_spark_session()
+spark = create_spark_session_sedona()
 reader = DataLakeIO(
     process='read',
-    table='uberfares',
+    table='features',
     state='current',
     layer='raw',
     loadtype='full',
