@@ -132,6 +132,8 @@ class Harmonizer:
             'dropoffboroughsource', lit('features')
         )
 
+        print("Full enriched Uber data count: ", full_enriched_uber.count())
+
         pb_null_enriched_uber = enriched_uber.filter(
             (enriched_uber.pickup_borough.isNull()) &
             (enriched_uber.dropoff_borough.isNotNull())
