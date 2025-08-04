@@ -4,7 +4,7 @@ from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
 from SourceUberFact.DataCleaner import DataCleaner
-from NoteBooks.Logger import Logger
+from Logger import Logger
 import argparse
 import sys
 import datetime

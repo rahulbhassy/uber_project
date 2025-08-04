@@ -19,15 +19,18 @@ class PreHarmonizer:
             print("Loading current delta data")
             reader = DataLoader(
                 path=self.currentio.filepath(),
-                filetype=self.currentio.file_ext(),
+                filetype='delta',
                 loadtype='full'
             )
             currentdata = reader.LoadData(spark=spark)
+            print("currentdata count: ", currentdata.count())
+            print("sourcedata count before preharmonizing: ", self.sourcedata.count())
             self.sourcedata = self.sourcedata.join(
                 currentdata,
                 on=_KEY_COLUMN,
                 how='left_anti'
             )
+            print("sourcedata count after preharmonizing: ", self.sourcedata.count())
             print("Filtered out existing trip IDs")
 
         print("Adding point geometries")

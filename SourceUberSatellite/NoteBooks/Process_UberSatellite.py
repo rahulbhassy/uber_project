@@ -6,7 +6,7 @@ from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
 from SourceUberSatellite.DataCleaner import DataCleaner
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from NoteBooks.Logger import Logger
+from Logger import Logger
 import argparse
 import sys
 import datetime

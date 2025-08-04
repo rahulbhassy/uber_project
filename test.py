@@ -21,6 +21,7 @@ dataloader = DataLoader(
     filetype='delta',
 )
 df = dataloader.LoadData(spark=spark)
+print("total count: ",df.count())
 df = df.filter(
     (df.pickupboroughsource == 'features') |
     (df.dropoffboroughsource == 'features')

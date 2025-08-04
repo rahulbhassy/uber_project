@@ -27,9 +27,16 @@ reader = DataLoader(
     filetype=readuberio.file_ext(),
     loadtype=loadtype
 )
+currentio = DataLakeIO(
+    process='write',
+    table='uber',
+    state='current',
+    layer='enrich',
+    loadtype='full'
+)
 preharmonizer = PreHarmonizer(
     sourcedata=reader.LoadData(spark=spark),
-    currentio=readuberio,
+    currentio=currentio,
     loadtype=loadtype
 )
 uber_df = preharmonizer.preharmonize(spark=spark)
@@ -70,13 +77,6 @@ harmonizer = Harmonizer(
 )
 enriched_uber = harmonizer.harmonize(spark=spark)
 # 7. Save results
-currentio = DataLakeIO(
-    process='write',
-    table='uber',
-    state='current',
-    layer='enrich',
-    loadtype='full'
-)
 datawriter = DataWriter(
     loadtype=loadtype,
     path=currentio.filepath(),
