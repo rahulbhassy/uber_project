@@ -78,9 +78,17 @@ def uber_processing_flow(load_type: str,runtype: str = 'prod'):
         runtype=runtype
     )
 
-    data_generator_task(load_type=load_type,runtype=runtype,wait_for=[load_uberfares_task])
+    data_generator_task(
+        load_type=load_type,
+        runtype=runtype,
+        wait_for=[load_uberfares_task]
+    )
 
-    downstream_dependencies = [load_uberfares_task, data_generator_task,load_weather_task]
+    downstream_dependencies = [
+        load_uberfares_task,
+        data_generator_task,
+        load_weather_task
+    ]
     load_tripdata_task(
         source_object="tripdetails",
         load_type=load_type,
