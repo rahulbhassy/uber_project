@@ -2,7 +2,10 @@ from prefect import flow, task
 from SourceUberFact.NoteBooks import Process_UberFact
 from SourceUberSatellite.NoteBooks import Process_UberSatellite
 from DataGenerator import IncrementalDataGenerator
-from prefect_dask.task_runners import DaskTaskRunner  # Optional for parallel runs
+from prefect_dask.task_runners import DaskTaskRunner
+from SourceWeather.NoteBooks import Process_Weather
+from prefect import get_run_logger
+# Optional for parallel runs
 
 
 # Define task for UberFares processing
@@ -15,9 +18,14 @@ def load_uberfares_task(source_object: str, load_type: str):
     )
 # Define task for data generation
 @task(name="Data_Generator", tags=["data-gen"])
-def data_generator_task():
-    """Task to generate incremental data"""
-    IncrementalDataGenerator.main()
+def data_generator_task(load_type: str):
+    """Task to generate incremental data (only for delta loads)"""
+    logger = get_run_logger()
+    if load_type == "delta":
+        logger.info("Running data generator for delta load")
+        IncrementalDataGenerator.main()
+    else:
+        logger.info("Skipping data generator for full load")
 
 @task(name="Load_TripData", tags=["trips","etl"])
 def load_tripdata_task(source_object: str, load_type: str):
@@ -27,6 +35,22 @@ def load_tripdata_task(source_object: str, load_type: str):
         loadtype=load_type
     )
 
+@task(name="Load_UberSatellite", tags=["uber-satellite", "etl"])
+def load_ubersatellite_task(load_type: str):
+    """Task to process Uber satellite data"""
+    Process_UberSatellite.main(
+        loadtype=load_type
+    )
+
+@task(name='Load_Weather', tags=["weather", "etl"])
+def load_weather_task(source_object: str, load_type: str):
+    """Task to process weather data"""
+    Process_Weather.main(
+        table=source_object,
+        loadtype=load_type
+    )
+
+
 # Main workflow
 @flow(
     name="Uber_Processing_Pipeline",
@@ -34,24 +58,34 @@ def load_tripdata_task(source_object: str, load_type: str):
     description="ETL pipeline for Uber data processing",
     version="1.0"
 )
-def uber_processing_flow():
+def uber_processing_flow(load_type: str):
     """Orchestrates Uber data processing workflow"""
+    logger = get_run_logger()
+    logger.info(f"Starting pipeline with load_type: {load_type}")
     # Execute UberFares task with parameters
     load_uberfares_task(
         source_object="uberfares",
+        load_type=load_type
+    )
+    load_weather_task(
+        source_object="weatherdetails",
         load_type="delta"
     )
 
-    # Execute data generator after UberFares completes
     data_generator_task(wait_for=[load_uberfares_task])
 
+    downstream_dependencies = [load_uberfares_task, data_generator_task,load_weather_task]
     load_tripdata_task(
         source_object="tripdetails",
-        load_type="delta",
-        wait_for=[data_generator_task]
+        load_type=load_type,
+        wait_for=downstream_dependencies
     )
 
+    load_ubersatellite_task(
+        load_type=load_type,
+        wait_for=downstream_dependencies
+    )
 
 # Run the flow
 if __name__ == "__main__":
-    uber_processing_flow()
+    uber_processing_flow(load_type='delta')

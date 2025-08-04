@@ -514,7 +514,7 @@ class DataSaver:
         print(full_report)
 
         report_filename = os.path.join(self.output_path, "generation_report.txt")
-        with open(report_filename, 'w') as f:
+        with open(report_filename, 'w',encoding='utf-8') as f:
             f.write(full_report)
 
         print(f"Report saved to: {report_filename}")

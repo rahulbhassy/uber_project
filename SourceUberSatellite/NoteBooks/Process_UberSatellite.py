@@ -11,13 +11,13 @@ import argparse
 import sys
 import datetime
 
-def main(output_path,loadtype):
+def main(loadtype):
     logging = Logger(notebook_name='Process_UberSatellite')
     logger = logging.setup_logger()
 
     # Log critical environment information
     logger.info(f"Starting UberFares Data Processing")
-    logger.info(f"Parameters: output={output_path},loadtype={loadtype}")
+    logger.info(f"Parameters:loadtype={loadtype}")
     try:
         setEnv()
         spark = create_spark_session()
@@ -95,9 +95,8 @@ if __name__ == "__main__":
     sys.stderr.reconfigure(line_buffering=True)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output", required=True)
     parser.add_argument("--loadtype", required=True)
 
     args = parser.parse_args()
-    exit_code = main(args.output,args.loadtype)
+    exit_code = main(args.loadtype)
     sys.exit(exit_code)
