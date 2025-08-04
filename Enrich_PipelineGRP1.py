@@ -6,7 +6,6 @@ from EnrichUber.NoteBooks import Process_Weather_Uber,Process_Distance_Uber
 from EnrichGeoSpatial.NoteBooks import Process_GeospatialTablesRefresh
 
 
-
 @task(name="Enrich_Weather_Uber", tags=["enrich", "weather", "uber"])
 def enrich_weather_uber_task(uber: str , weather: str, load_type: str, runtype: str = 'prod'):
     """Task to enrich Uber data with weather information"""
