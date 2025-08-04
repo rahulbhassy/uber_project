@@ -5,12 +5,12 @@ from SourceWeather.Schema import weather_schema
 from SourceWeather.APILoader import WeatherAPI
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
-from Logger import Logger
+from Shared.Logger import Logger
 import argparse
 import sys
 import datetime
 
-def main(table, loadtype):
+def main(table, loadtype,runtype='prod'):
     from SourceUberFact.Schema import sourceschema
     logging = Logger(notebook_name='Process_Weather')
     logger = logging.setup_logger()
@@ -41,6 +41,7 @@ def main(table, loadtype):
             state='current',
             layer='raw',
             loadtype=loadtype,
+            runtype='runtype'
         )
         writer = DataWriter(
             loadtype=loadtype,
@@ -63,7 +64,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--table", required=True)
     parser.add_argument("--loadtype", required=True)
+    parser.add_argument("--runtype", required=True)
+
 
     args = parser.parse_args()
-    exit_code = main(args.table, args.loadtype)
+    exit_code = main(args.table, args.loadtype,args.runtype)
     sys.exit(exit_code)

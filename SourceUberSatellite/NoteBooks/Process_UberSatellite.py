@@ -6,12 +6,12 @@ from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
 from SourceUberSatellite.DataCleaner import DataCleaner
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from Logger import Logger
+from Shared.Logger import Logger
 import argparse
 import sys
 import datetime
 
-def main(loadtype):
+def main(loadtype,runtype='prod'):
     logging = Logger(notebook_name='Process_UberSatellite')
     logger = logging.setup_logger()
 
@@ -32,7 +32,8 @@ def main(loadtype):
             loadio = DataLakeIO(
                 process='load',
                 table=sourceobject,
-                loadtype=loadtype
+                loadtype=loadtype,
+                runtype=runtype
             )
             dataloader = DataLoader(
                 path=loadio.filepath(),
@@ -54,7 +55,8 @@ def main(loadtype):
                 table=sourceobject,
                 state='current',
                 loadtype=loadtype,
-                layer='raw'
+                layer='raw',
+                runtype=runtype
             )
             datawriter = DataWriter(
                 loadtype=loadtype,
@@ -96,7 +98,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--loadtype", required=True)
+    parser.add_argument("--runtype", required=False)
+
 
     args = parser.parse_args()
-    exit_code = main(args.loadtype)
+    exit_code = main(args.loadtype,args.runtype)
     sys.exit(exit_code)

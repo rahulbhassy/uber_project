@@ -4,12 +4,12 @@ from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
 from SourceUberFact.DataCleaner import DataCleaner
-from Logger import Logger
+from Shared.Logger import Logger
 import argparse
 import sys
 import datetime
 
-def main(sourceobject, loadtype):
+def main(sourceobject, loadtype,runtype='prod'):
     from SourceUberFact.Schema import sourceschema
     logging = Logger(notebook_name='Process_UberFact')
     logger = logging.setup_logger()
@@ -30,7 +30,8 @@ def main(sourceobject, loadtype):
         loadio = DataLakeIO(
             process='load',
             table=sourceobject,
-            loadtype=loadtype
+            loadtype=loadtype,
+            runtype=runtype
         )
         dataloader = DataLoader(
             path=loadio.filepath(),
@@ -54,7 +55,8 @@ def main(sourceobject, loadtype):
             table=sourceobject,
             state='current',
             layer='raw',
-            loadtype=loadtype
+            loadtype=loadtype,
+            runtype=runtype
         )
         datawriter = DataWriter(
             loadtype=loadtype,
@@ -81,7 +83,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--sourceobject", required=True)
     parser.add_argument("--loadtype", required=True)
+    parser.add_argument("--runtype", required=False)
 
     args = parser.parse_args()
-    exit_code = main(args.sourceobject, args.loadtype)
+    exit_code = main(args.sourceobject, args.loadtype,args.runtype)
     sys.exit(exit_code)

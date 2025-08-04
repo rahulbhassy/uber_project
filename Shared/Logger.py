@@ -9,7 +9,7 @@ import datetime
 class Logger:
     def __init__(self,notebook_name):
         self.notebook_name = notebook_name
-        self.PROJECT_PATH = '//'
+        self.PROJECT_PATH = 'C:/Users/HP/uber_project/Shared'
 
     def setup_logger(self):
         logger = logging.getLogger('UberProcessor')
