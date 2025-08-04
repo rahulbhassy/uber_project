@@ -4,7 +4,7 @@ from faker import Faker
 from datetime import datetime, date
 
 
-def generate_new_customers(num_new_customers=2100):
+def generate_new_customers(num_new_customers=2000):
     Faker.seed(42)
     fake = Faker()
     new_customers = []

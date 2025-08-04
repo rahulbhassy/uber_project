@@ -8,11 +8,12 @@ from pyspark.sql.functions import date_format
 
 setVEnv()
 spark = create_spark_session_sedona()
+SedonaContext.create(spark)
 reader = DataLakeIO(
     process='read',
-    table='features',
+    table='uber',
     state='current',
-    layer='raw',
+    layer='enrich',
     loadtype='full',
 )
 
@@ -22,14 +23,5 @@ dataloader = DataLoader(
 )
 df = dataloader.LoadData(spark=spark)
 
-# Fix: Convert date/time columns to formatted strings
-for col_name, col_type in df.dtypes:
-    if col_type in ['date', 'timestamp']:
-        df = df.withColumn(col_name, date_format(col_name, "yyyy-MM-dd HH:mm:ss"))
-
-pandas_df = df.toPandas()
-pandas_df.to_excel(
-    "C:/Users/HP/uber_project/Data/Sandbox/DataSource/2025-08-01/uberfares.xlsx",
-    sheet_name="Sheet1",
-    index=False
-)
+viewer = SparkTableViewer(df=df)
+viewer.display()
