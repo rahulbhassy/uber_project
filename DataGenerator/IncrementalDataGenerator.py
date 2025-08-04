@@ -4,13 +4,16 @@ from faker import Faker
 from datetime import datetime
 import os
 from pyspark.sql import DataFrame
+import argparse
+import sys
+import datetime
 
 # Import all required classes from the previous code
-from DGFunctions import (
+from DataGenerator.DGFunctions import (
     GetData, DataGenerator, Combiner, TripGenerator, DataSaver
 )
 
-def main():
+def main(runtype: str = 'prod'):
     print("Starting data generation process...")
     Faker.seed(42)
     fake = Faker()
@@ -18,13 +21,13 @@ def main():
 
     # 1. Load existing data
     print("\n1. Loading existing data...")
-    customer_getter = GetData("customerdetails")
+    customer_getter = GetData(table="customerdetails",runtype=runtype)
     existing_customers = customer_getter.read_existing_data()
 
-    driver_getter = GetData("driverdetails")
+    driver_getter = GetData(table="driverdetails",runtype=runtype)
     existing_drivers = driver_getter.read_existing_data()
 
-    vehicle_getter = GetData("vehicledetails")
+    vehicle_getter = GetData(table="vehicledetails",runtype=runtype)
     existing_vehicles = vehicle_getter.read_existing_data()
 
     # 2. Get max IDs for generation
@@ -70,7 +73,7 @@ def main():
     # 5. Generate trip details
     print("\n5. Generating trip details...")
     # Get existing trip IDs
-    trip_getter = GetData("uberfares")
+    trip_getter = GetData(table="uberfares",runtype=runtype)
     new_trip_ids = trip_getter._get_trip_ids()
 
     # Generate new trip IDs (1000 trips)
@@ -81,7 +84,7 @@ def main():
 
     # 6. Save all data
     print("\n6. Saving data to CSV files...")
-    data_saver = DataSaver()
+    data_saver = DataSaver(runtype=runtype)
     data_saver.save_all(
         new_customers=new_data['customers'],
         new_drivers=new_data['drivers'],
@@ -97,4 +100,12 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--runtype", required=True)
+
+    args = parser.parse_args()
+    exit_code = main(args.runtype)
+    sys.exit(exit_code)

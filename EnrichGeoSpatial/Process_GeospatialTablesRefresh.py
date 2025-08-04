@@ -1,18 +1,19 @@
 from sedona.spark import SedonaContext
-from sedona.register.geo_registrator import SedonaRegistrator
 from Shared.sparkconfig import create_spark_session_sedona
 from Shared.pyspark_env import setEnv
 from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
+from pyspark.sql.functions import expr, col
+from EnrichGeoSpatial.Harmonization import PreHarmonizer,Harmonizer
 
 setEnv()
 spark = create_spark_session_sedona()
 SedonaContext.create(spark)
-SedonaRegistrator.registerAll(spark)
 sourceobjectuber = 'uberfares'
 sourceobjectborough = 'features'
-loadtype = 'full'
+sourceobjecttrip = 'tripdetails'
+loadtype = 'delta'
 
 readuberio = DataLakeIO(
     process='read',
@@ -21,17 +22,26 @@ readuberio = DataLakeIO(
     loadtype=loadtype,
     layer='enrich'
 )
-uberpath = readuberio.filepath()
-spark.sql(f"""
-    CREATE OR REPLACE TEMP VIEW uber_trips AS
-    SELECT *, 
-        ST_Point(CAST(pickup_longitude AS DOUBLE), 
-                 CAST(pickup_latitude AS DOUBLE)) AS pickup_point,
-        ST_Point(CAST(dropoff_longitude AS DOUBLE), 
-                 CAST(dropoff_latitude AS DOUBLE)) AS dropoff_point       
-    FROM delta.`{uberpath}`
-""")
+reader = DataLoader(
+    path=readuberio.filepath(),
+    filetype=readuberio.file_ext(),
+    loadtype=loadtype
+)
+currentio = DataLakeIO(
+    process='write',
+    table='uber',
+    state='current',
+    layer='enrich',
+    loadtype='full'
+)
+preharmonizer = PreHarmonizer(
+    sourcedata=reader.LoadData(spark=spark),
+    currentio=currentio,
+    loadtype=loadtype
+)
+uber_df = preharmonizer.preharmonize(spark=spark)
 
+# 3. Load boroughs data
 readfeaturesio = DataLakeIO(
     process='read',
     table=sourceobjectborough,
@@ -44,43 +54,29 @@ dataloader = DataLoader(
     filetype=readfeaturesio.file_ext(),
     loadtype=loadtype
 )
+featuresdata = dataloader.LoadData(spark=spark)
 
-# 3. Your existing boroughs view with validation
-featuresdata = dataloader.LoadData(spark)
-featuresdata.createOrReplaceTempView("boroughs")
-spark.sql("""
-    CREATE OR REPLACE TEMP VIEW boroughs_spatial AS
-    SELECT borough, ST_GeomFromGeoJSON(geometry_json) AS geom
-    FROM boroughs
-    WHERE geometry_json IS NOT NULL
-      AND ST_IsValid(ST_GeomFromGeoJSON(geometry_json))
-""")
-
-# 4. Cache for performance
-spark.sql("CACHE TABLE boroughs_spatial")
-
-# 5. Simple spatial join (no broadcast hints)
-enriched_uber = spark.sql("""
-    SELECT 
-        u.*,
-        p.borough AS pickup_borough,
-        d.borough AS dropoff_borough
-    FROM uber_trips u
-    LEFT JOIN boroughs_spatial p
-        ON ST_Contains(p.geom, u.pickup_point)
-    LEFT JOIN boroughs_spatial d
-        ON ST_Contains(d.geom, u.dropoff_point)
-""")
+boroughs_df = featuresdata.withColumn(
+    "geom",
+    expr("ST_GeomFromGeoJSON(geometry_json)")
+).select("borough", "geom")
+boroughs_df.cache()
 
 
-# Save the DataFrame as a Delta table (overwrite mode)
-currentio = DataLakeIO(
-    process='write',
-    table='uber',
+tripio = DataLakeIO(
+    process='read',
+    table=sourceobjecttrip,
     state='current',
-    layer='enrich',
+    layer='raw',
     loadtype='full'
 )
+harmonizer = Harmonizer(
+    sourcedata=uber_df,
+    boroughs_df=boroughs_df,
+    tripio=tripio
+)
+enriched_uber = harmonizer.harmonize(spark=spark)
+# 7. Save results
 datawriter = DataWriter(
     loadtype=loadtype,
     path=currentio.filepath(),

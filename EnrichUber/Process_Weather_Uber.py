@@ -11,7 +11,7 @@ spark = create_spark_session()
 uber = "uberfares"
 weather = "weatherdetails"
 weatherschema = weather_schema
-loadtype = 'full'
+loadtype = 'delta'
 
 
 readio = DataLakeIO(

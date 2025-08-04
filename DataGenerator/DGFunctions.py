@@ -27,9 +27,10 @@ class GetData:
         "customerdetails": "customer_id",
         "vehicledetails": "vehicle_no",
     }
-    def __init__(self,table):
+    def __init__(self,table,runtype: str = 'prod'):
         self.table = table
         self.spark = create_spark_session()
+        self.runtype = runtype
 
     def _get_trip_ids(self):
         deltafileio = DataLakeIO(
@@ -37,7 +38,8 @@ class GetData:
             table=self.table,
             state='delta',
             layer='raw',
-            loadtype='delta'
+            loadtype='delta',
+            runtype=self.runtype
         )
         deltapath = deltafileio.filepath()
         print(f"Input folder created for getting New Trip Ids: {deltapath}")
@@ -58,7 +60,8 @@ class GetData:
             table=self.table,
             state='current',
             layer='raw',
-            loadtype='full'
+            loadtype='full',
+            runtype= self.runtype
         )
         dataloader = DataLoader(
             path=currentio.filepath(),
@@ -368,13 +371,18 @@ class DataSaver:
         'trips': 'tripdetails.csv'
     }
 
-    def __init__(self):
+    def __init__(self,runtype: str = 'prod'):
         """
         Initialize DataSaver with dated output directory and fixed filenames
         """
+        self.runtype = runtype
         self.date_str = datetime.now().strftime("%Y-%m-%d")
-        self.output_path = os.path.join(self._BASE_PATH, self.date_str)
+        if self.runtype == 'dev':
+            self.output_path = os.path.join(self._BASE_PATH,'Sandbox', self.date_str)
+        else:
+            self.output_path = os.path.join(self._BASE_PATH, self.date_str)
         self.report_data = []
+        self.runtype = runtype
 
         os.makedirs(self.output_path, exist_ok=True)
         print(f"Data will be saved to: {self.output_path}")
@@ -512,9 +520,8 @@ class DataSaver:
         full_report = f"\n{separator}\n{header}\n{separator}\n\n{report}\n"
 
         print(full_report)
-
         report_filename = os.path.join(self.output_path, "generation_report.txt")
-        with open(report_filename, 'w') as f:
+        with open(report_filename, 'w',encoding='utf-8') as f:
             f.write(full_report)
 
         print(f"Report saved to: {report_filename}")

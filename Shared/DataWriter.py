@@ -1,6 +1,6 @@
 from pyspark.sql import DataFrame
 from pyspark.sql import SparkSession
-from connection import JDBC_URL, JDBC_PROPERTIES
+from Shared.connection import JDBC_URL, JDBC_PROPERTIES
 from Shared.FileIO import IntermediateIO
 from Shared.DataLoader import DataLoader
 

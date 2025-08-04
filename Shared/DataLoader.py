@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType
-from connection import JDBC_URL, JDBC_PROPERTIES
+from Shared.connection import JDBC_URL, JDBC_PROPERTIES
 import time
 
 

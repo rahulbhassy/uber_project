@@ -8,7 +8,7 @@ from Harmonization import Distance,PreHarmonizer
 setVEnv()
 spark = create_spark_session()
 table = "uberfares"
-loadtype = 'full'
+loadtype = 'delta'
 
 readio = DataLakeIO(
     process="enrichweather",
