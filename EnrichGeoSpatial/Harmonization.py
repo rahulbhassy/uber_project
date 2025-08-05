@@ -1,7 +1,7 @@
 from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
-from pyspark.sql.functions import expr, col, lit
+from pyspark.sql.functions import expr, col, lit , round
 
 _KEY_COLUMN = "trip_id"
 
@@ -111,17 +111,17 @@ class Harmonizer:
                 col("u.pickup_hour"),
                 col("u.pickup_day"),
                 col("u.pickup_month"),
-                col("u.avg_temp").alias("temperature"),
-                col("u.precipitation"),
-                col("u.avg_humidity").alias('humidity'),
-                col('u.avg_wind_speed').alias('wind_speed'),
-                col('u.avg_snow_fall').alias('snow_fall'),
+                round(col("u.avg_temp"), 2).alias("temperature"),
+                round(col("u.precipitation"), 2).alias("precipitation"),
+                round(col("u.avg_humidity"), 2).alias("humidity"),
+                round(col("u.avg_wind_speed"), 2).alias("wind_speed"),
+                round(col("u.avg_snow_fall"), 2).alias("snow_fall"),
                 col('u.distance_km'),
                 col("p.borough").alias("pickup_borough"),
                 col("d.borough").alias("dropoff_borough")
             )
         )
-
+#hi
         print("Splitting data by borough completeness")
         full_enriched_uber = enriched_uber.filter(
             (enriched_uber.pickup_borough.isNotNull()) &

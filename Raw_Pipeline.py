@@ -57,12 +57,12 @@ def load_weather_task(source_object: str, load_type: str,runtype: str = 'prod'):
 
 # Main workflow
 @flow(
-    name="Uber_Processing_Pipeline",
+    name="Raw_Uber_Processing_Pipeline",
     task_runner=DaskTaskRunner(),  # Remove for sequential execution
     description="ETL pipeline for Uber data processing",
     version="1.0"
 )
-def uber_processing_flow(load_type: str,runtype: str = 'prod'):
+def raw_processing_flow(load_type: str,runtype: str = 'prod'):
     """Orchestrates Uber data processing workflow"""
     logger = get_run_logger()
     logger.info(f"Starting pipeline with load_type: {load_type}")
@@ -78,9 +78,17 @@ def uber_processing_flow(load_type: str,runtype: str = 'prod'):
         runtype=runtype
     )
 
-    data_generator_task(load_type=load_type,runtype=runtype,wait_for=[load_uberfares_task])
+    data_generator_task(
+        load_type=load_type,
+        runtype=runtype,
+        wait_for=[load_uberfares_task]
+    )
 
-    downstream_dependencies = [load_uberfares_task, data_generator_task,load_weather_task]
+    downstream_dependencies = [
+        load_uberfares_task,
+        data_generator_task,
+        load_weather_task
+    ]
     load_tripdata_task(
         source_object="tripdetails",
         load_type=load_type,
@@ -96,4 +104,4 @@ def uber_processing_flow(load_type: str,runtype: str = 'prod'):
 
 # Run the flow
 if __name__ == "__main__":
-    uber_processing_flow(load_type='full',runtype='dev')
+    raw_processing_flow(load_type='full',runtype='dev')

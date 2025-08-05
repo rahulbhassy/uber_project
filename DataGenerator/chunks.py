@@ -4,16 +4,16 @@ import random
 from datetime import datetime, timedelta
 
 # Load your data into a DataFrame
-df = pd.read_csv('D:/Downloads/nyc_taxi_data_2lakh_rows.csv')
+df = pd.read_csv('C:/Users/HP/uber_project/DataGenerator/uber_nyc_fraud_analysis.csv')
 
-basepath = 'C:/Users/HP/uber_project/Data/UberFaresData/'
+basepath = 'C:/Users/HP/uber_project/Data/UberFaresData/NewData'
 start_row = 0
 chunk_number = 1
 c = 0
 
 while start_row < len(df):
     # pick a random chunk size
-    chunk_size = random.randint(5000, 6000)
+    chunk_size = random.randint(60000, 70000)
     end_row = min(start_row + chunk_size, len(df))
     chunk = df.iloc[start_row:end_row]
 

@@ -6,6 +6,7 @@
       <sourceFolder url="file://$MODULE_DIR$/EnrichUber" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/SourceUberFact" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/DataGenerator" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/EnrichGeoSpatial" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/NoteBooks" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
     </content>

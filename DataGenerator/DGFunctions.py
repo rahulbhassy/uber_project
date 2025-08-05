@@ -297,6 +297,11 @@ class Combiner:
         return self
 
 
+import random
+
+import random
+
+
 class TripGenerator:
     def __init__(self, combiner, fake):
         """
@@ -311,11 +316,161 @@ class TripGenerator:
         self.driver_usage = {}
         self.vehicle_usage = {}
 
+        # Define location weights (major cities get higher weights)
+        self.location_weights = {
+            # Tier 1: NYC Boroughs (Highest weight)
+            "Manhattan": 35, "Brooklyn": 35, "Queens": 30, "Bronx": 30, "Staten Island": 25,
+            # Tier 2: Major Northeast Cities
+            "Boston": 20, "Philadelphia": 20, "Pittsburgh": 18, "Toronto": 20, "Ottawa": 18,
+            "Montreal": 18, "Providence": 18, "Newark": 18, "Jersey City": 18, "Bridgeport": 15,
+            "New Haven": 15, "Hartford": 15, "Stamford": 15,
+            # Tier 3: Other Notable Cities
+            "Cambridge": 12, "Lowell": 10, "Brockton": 10, "Mississauga": 12, "Brampton": 12,
+            "Hamilton": 12, "London": 10, "Markham": 12, "Vaughan": 12, "Kingston": 10,
+            "Windsor": 10, "Paterson": 12, "Elizabeth": 12, "Edison Township": 10, "Clifton": 10,
+            "Allentown": 10, "Erie": 8, "Scranton": 8, "Lancaster": 8, "York": 8,
+            "Warwick": 10, "Cranston": 10, "Waterbury": 8, "Norwalk": 10, "Danbury": 8,
+            "Worcester": 10, "Springfield": 8, "New Bedford": 8, "Lynn": 8, "Quincy": 8,
+            "Fall River": 8, "Portland": 8, "Burlington": 8, "Manchester": 8,
+            # Tier 4: Rural/Other areas (Default weight=1)
+        }
+
+        # Define trip intentions with realistic weights
+        self.trip_intentions = [
+            "Commute",  # 25%
+            "Business",  # 15%
+            "Leisure",  # 12%
+            "Errand",  # 10%
+            "Airport Transfer",  # 8%
+            "Social/Visiting",  # 7%
+            "Dining",  # 5%
+            "Shopping",  # 5%
+            "Medical/Healthcare",  # 4%
+            "School/Education",  # 3%
+            "Event/Entertainment",  # 3%
+            "Tourism/Sightseeing",  # 2%
+            "Hotel Transfer",  # 1%
+            "Ride Pooling/Shared",  # 1%
+            "Religious",  # 0.5%
+            "Exercise/Outdoor",  # 0.5%
+            "Delivery",  # 0.5%
+            "Relocation/Move",  # 0.5%
+            "Other"  # 1%
+        ]
+        self.intention_weights = [
+            250,  # Commute
+            150,  # Business
+            120,  # Leisure
+            100,  # Errand
+            80,  # Airport Transfer
+            70,  # Social/Visiting
+            50,  # Dining
+            50,  # Shopping
+            40,  # Medical/Healthcare
+            30,  # School/Education
+            30,  # Event/Entertainment
+            20,  # Tourism/Sightseeing
+            10,  # Hotel Transfer
+            10,  # Ride Pooling/Shared
+            5,  # Religious
+            5,  # Exercise/Outdoor
+            5,  # Delivery
+            5,  # Relocation/Move
+            10  # Other
+        ]
+
     def generate_trip_details(self, trip_ids):
         """Generate trip details using combined customer/driver/vehicle pools"""
         trip_details = []
-        trip_statuses = ['Completed', 'Completed', 'Completed', 'Completed','Completed', 'Completed', 'Completed', 'Completed', 'Cancelled', 'No Show']
+        trip_statuses = ['Completed', 'Completed', 'Completed', 'Completed', 'Completed',
+                         'Completed', 'Completed', 'Completed', 'Cancelled', 'No Show']
         payment_methods = ['Credit Card', 'Debit Card', 'Cash', 'Digital Wallet', 'Corporate Account']
+
+        # Full list of possible locations
+        locations = [
+            # NYC Boroughs
+            "Staten Island", "Queens", "Brooklyn", "Manhattan", "Bronx",
+
+            # Surrounding NY areas
+            "Nassau County (Long Island outside NYC)", "Suffolk County (Eastern Long Island)",
+            "Westchester County (outside NYC)", "Rockland County (outside NYC)",
+            "Orange County (Hudson Valley)", "Putnam County (Hudson Valley)",
+            "Dutchess County (Hudson Valley)", "Ulster County (Catskills region)",
+            "Sullivan County (Catskills)", "Delaware County (rural Catskills)",
+            "Greene County (Catskills)", "Columbia County (rural)",
+            "Rensselaer County (outside Albany)", "Washington County (rural northeast)",
+            "Essex County (Adirondacks)", "Franklin County (Adirondacks)",
+            "Clinton County (north border)", "St. Lawrence County (rural north)",
+            "Jefferson County (Thousand Islands)", "Lewis County (rural)",
+            "Hamilton County (Adirondacks)", "Fulton County (rural)",
+            "Montgomery County (rural)", "Herkimer County (rural)",
+            "Oneida County (outside Utica)", "Sussex County (rural northwest)",
+
+            # New Jersey
+            "Warren County (Delaware Water Gap area)", "Hunterdon County (rural townships)",
+            "Salem County (rural south)", "Cumberland County (rural areas)",
+            "Cape May County (rural areas outside resorts)", "Ocean County (Pine Barrens)",
+            "Burlington County (rural townships)", "Atlantic County (rural inland)",
+            "Morris County (rural areas)",
+
+            # Pennsylvania
+            "Lackawanna County (rural areas)", "Berks County (outside Reading)",
+            "Chester County (rural townships)", "Westmoreland County (outside Pittsburgh metro)",
+            "Bradford County (northern rural)", "Somerset County (rural mountains)",
+            "Tioga County (forest areas)", "Potter County (rural)",
+            "Wayne County (rural northeast)", "Cameron County (sparsely populated)",
+
+            # New England
+            "Essex County (rural northeast)", "Orleans County (rural north)",
+            "Caledonia County (rural)", "Lamoille County (rural)",
+            "Washington County (rural areas)", "Orange County (rural)",
+            "Windsor County (rural)", "Windham County (rural south)",
+            "Bennington County (rural southwest)", "Rutland County (rural areas)",
+            "Berkshire County (western rural)", "Franklin County (rural northwest)",
+            "Hampshire County (rural areas)", "Hampden County (rural areas)",
+            "Worcester County (rural areas)", "Barnstable County (Cape Cod rural)",
+            "Dukes County (Martha's Vineyard)", "Nantucket County",
+            "Essex County (rural areas)", "Plymouth County (rural areas)",
+            "Litchfield County (rural northwest)", "Windham County (rural northeast)",
+            "Tolland County (rural areas)", "New London County (rural areas)",
+            "Middlesex County (rural townships)", "Fairfield County (rural areas outside cities)",
+            "Hartford County (rural areas)", "New Haven County (rural areas)",
+            "Eastern CT rural areas", "Northwestern CT hills",
+
+            # Canada
+            "Muskoka District (rural)", "Haliburton County (rural)",
+            "Renfrew County (rural)", "Lanark County (rural)",
+            "Hastings County (rural)", "Lennox and Addington (rural)",
+            "Prince Edward County (rural)", "Northumberland County (rural)",
+            "Peterborough County (rural)", "Kawartha Lakes (rural)",
+            "Ville-Marie", "Le Plateau-Mont-Royal", "Outremont",
+            "Côte-des-Neiges–Notre-Dame-de-Grâce", "Verdun", "Rosemont–La Petite-Patrie",
+            "La Cité-Limoilou", "Sainte-Foy–Sillery–Cap-Rouge", "Charlesbourg",
+            "Beauport", "Abitibi-Témiscamingue (rural)", "Bas-Saint-Laurent (rural)",
+            "Centre-du-Québec (rural)", "Chaudière-Appalaches (rural)", "Côte-Nord (rural)",
+            "Estrie (rural)", "Gaspésie–Îles-de-la-Madeleine (rural)", "Lanaudière (rural)",
+            "Laurentides (rural)", "Mauricie (rural)",
+
+            # Major Cities (already in weights dictionary)
+            "Newark", "Jersey City", "Paterson", "Elizabeth", "Edison Township",
+            "Woodbridge Township", "Lakewood Township", "Toms River Township",
+            "Hamilton Township", "Clifton", "Philadelphia", "Pittsburgh", "Allentown",
+            "Erie", "Reading Borough", "Scranton", "Bethlehem", "Lancaster", "Harrisburg",
+            "York", "Toronto", "Ottawa", "Mississauga", "Brampton", "Hamilton", "London",
+            "Markham", "Vaughan", "Kingston", "Windsor", "Providence", "Warwick", "Cranston",
+            "Pawtucket", "East Providence", "Woonsocket", "Newport", "Central Falls",
+            "Cumberland", "Coventry", "Bridgeport", "New Haven", "Hartford", "Stamford",
+            "Waterbury", "Norwalk", "Danbury", "New Britain", "West Haven", "Greenwich",
+            "Washington County (rural south)", "Kent County (rural areas)",
+            "Bristol County (rural areas)", "Newport County (rural areas)",
+            "Providence County (rural areas)", "Block Island", "Exeter (rural town)",
+            "Hopkinton (rural)", "Richmond (rural)", "Foster (rural)", "Boston", "Worcester",
+            "Springfield", "Cambridge", "Lowell", "Brockton", "New Bedford", "Lynn", "Quincy",
+            "Fall River", "Portland", "Burlington", "Manchester"
+        ]
+
+        # Create weight list matching locations
+        weight_list = [self.location_weights.get(loc, 1) for loc in locations]
 
         for trip_id in trip_ids:
             # Select random active entities
@@ -333,17 +488,70 @@ class TripGenerator:
             base_fare = round(distance * random.uniform(1.5, 3.0), 2)
             tip_amount = round(base_fare * random.uniform(0, 0.25), 2)
 
+            # Select locations with weighted probability
+            pickup = random.choices(locations, weights=weight_list, k=1)[0]
+            dropoff = random.choices(locations, weights=weight_list, k=1)[0]
+
+            # Ensure pickup and dropoff aren't identical
+            while pickup == dropoff:
+                dropoff = random.choices(locations, weights=weight_list, k=1)[0]
+
+            # Select trip intention with weighted probability
+            intention = random.choices(
+                self.trip_intentions,
+                weights=self.intention_weights,
+                k=1
+            )[0]
+
+            # Adjust intention probabilities based on locations
+            if "Airport" in pickup or "Airport" in dropoff:
+                # Increase probability for airport transfers
+                intention = random.choices(
+                    ["Airport Transfer", intention],
+                    weights=[70, 30],
+                    k=1
+                )[0]
+            elif "Hotel" in pickup or "Hotel" in dropoff:
+                # Increase probability for hotel transfers
+                intention = random.choices(
+                    ["Hotel Transfer", intention],
+                    weights=[60, 40],
+                    k=1
+                )[0]
+            elif "Tourism" in pickup or "Tourism" in dropoff or "Sightseeing" in pickup or "Sightseeing" in dropoff:
+                # Increase probability for tourism
+                intention = random.choices(
+                    ["Tourism/Sightseeing", intention],
+                    weights=[65, 35],
+                    k=1
+                )[0]
+            elif "Medical" in pickup or "Medical" in dropoff or "Healthcare" in pickup or "Healthcare" in dropoff:
+                # Increase probability for medical trips
+                intention = random.choices(
+                    ["Medical/Healthcare", intention],
+                    weights=[75, 25],
+                    k=1
+                )[0]
+            elif "School" in pickup or "School" in dropoff or "University" in pickup or "University" in dropoff:
+                # Increase probability for school trips
+                intention = random.choices(
+                    ["School/Education", intention],
+                    weights=[80, 20],
+                    k=1
+                )[0]
+
             trip_details.append({
                 'trip_id': trip_id,
                 'driver_id': driver['driver_id'],
                 'customer_id': customer['customer_id'],
-                'pickup_location': self.fake.address().replace('\n', ', '),
-                'dropoff_location': self.fake.address().replace('\n', ', '),
+                'pickup_location': pickup,
+                'dropoff_location': dropoff,
                 'tip_amount': tip_amount,
                 'payment_method': random.choice(payment_methods),
                 'trip_status': random.choice(trip_statuses),
                 'customer_rating': random.choice([None, 3, 4, 4, 5, 5, 5]),
-                'driver_rating': random.choice([None, 3, 4, 4, 5, 5, 5])
+                'driver_rating': random.choice([None, 3, 4, 4, 5, 5, 5]),
+                'trip_intention': intention
             })
 
         print(f"Generated {len(trip_details)} trip records")
@@ -443,8 +651,7 @@ class DataSaver:
             'trips': [
                 'trip_id', 'driver_id', 'customer_id', 'pickup_location',
                 'dropoff_location', 'tip_amount','payment_method', 'trip_status',
-                'customer_rating',
-                'driver_rating'
+                'customer_rating','driver_rating','trip_intention'
             ]
         }
 

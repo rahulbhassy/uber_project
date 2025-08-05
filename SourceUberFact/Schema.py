@@ -32,7 +32,8 @@ def sourceschema(sourcedefinition: str) -> StructType:
             StructField("payment_method",StringType(),True),
             StructField("trip_status",StringType(),False),
             StructField("customer_rating",DoubleType(),True),
-            StructField("driver_rating",DoubleType(),True)
+            StructField("driver_rating",DoubleType(),True),
+            StructField("trip_intention", StringType(), True)
 
         ])
     raise ValueError(f"No schema defined for '{sourcedefinition}'")
