@@ -1,27 +1,39 @@
-from sedona.spark import SedonaContext
-from Shared.sparkconfig import create_spark_session_sedona
 from Shared.pyspark_env import setVEnv
-from Shared.DataLoader import DataLoader
-from Shared.FileIO import SparkTableViewer
+from Shared.sparkconfig import create_spark_session
+from SourceWeather.Initialiser import Init
+from SourceWeather.Schema import weather_schema
+from SourceWeather.APILoader import WeatherAPI
 from Shared.FileIO import DataLakeIO
-from pyspark.sql.functions import date_format
+from Shared.DataWriter import DataWriter
+from Shared.DataLoader import DataLoader
+
 
 setVEnv()
-spark = create_spark_session_sedona()
-SedonaContext.create(spark)
-reader = DataLakeIO(
-    process='read',
-    table='uber',
+table = 'weatherdetails'
+spark = create_spark_session()
+loadtype = 'full'
+init = Init(
+    loadtype=loadtype,
+    spark=spark,
+    table=table
+)
+df = init.Load()
+currentio = DataLakeIO(
+    process='write',
+    table=table,
     state='current',
-    layer='enrich',
-    loadtype='full',
+    layer='raw',
+    loadtype=loadtype,
 )
-
-dataloader = DataLoader(
-    path=reader.filepath(),
-    filetype='delta',
+reader = DataLoader(
+    path=currentio.filepath(),
+    filetype=currentio.file_ext(),
+    loadtype=loadtype
 )
-df = dataloader.LoadData(spark=spark)
-
-viewer = SparkTableViewer(df=df)
-viewer.display()
+sourcedata = reader.LoadData(spark=spark)
+df = df.join(
+    sourcedata,
+    on=['date'],
+    how='left_anti'
+)
+print(df.count())
