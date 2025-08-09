@@ -1,6 +1,5 @@
 from Shared.pyspark_env import setVEnv
 from Shared.sparkconfig import create_spark_session
-from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
 from EnrichFare.Harmonization import Harmonizer
@@ -9,7 +8,7 @@ setVEnv()
 spark = create_spark_session()
 table = 'fares'
 loadtype = 'full'
-runtype = 'dev'
+runtype = 'prod'
 
 harmonizer = Harmonizer(
     table=table,

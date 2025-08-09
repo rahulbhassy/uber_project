@@ -1,6 +1,6 @@
 from typing import List
 from pyspark.sql import *
-from pyspark.sql.functions import create_map, lit, coalesce , when
+from pyspark.sql.functions import create_map, lit, coalesce , when ,round
 from pyspark.sql.functions import col, unix_timestamp
 from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
@@ -161,7 +161,7 @@ class FareHarmonizer:
                 "tip_pct",
                 when(
                     (col("fare_amount") + col("tip_amount")) == 0, None
-                ).otherwise(col("tip_amount") / (col("fare_amount") + 1e-9))
+                ).otherwise((col("tip_amount") / (col("fare_amount") + 1e-9))*100)
             ).withColumn(
                 "pickup_month",
                 self.mapping_monthexpr.getItem(col("pickup_month"))
@@ -173,7 +173,7 @@ class FareHarmonizer:
                  when(col("pickup_hour").isNull(), lit("Unknown"))
                 .when((col("pickup_hour") >= 1) & (col("pickup_hour") <= 3), lit("After Midnight"))
                 .when((col("pickup_hour") > 3) & (col("pickup_hour") <= 5), lit("Early Morning"))
-                .when((col("pickup_hour") > 5) & (col("pickup_hourl") <= 9), lit("Morning Rush"))
+                .when((col("pickup_hour") > 5) & (col("pickup_hour") <= 9), lit("Morning Rush"))
                 .when((col("pickup_hour") > 9) & (col("pickup_hour") <= 15), lit("Midday"))
                 .when((col("pickup_hour") > 15) & (col("pickup_hour") <= 19), lit("Evening Rush"))
                 .when((col("pickup_hour") > 19) & (col("pickup_hour") <= 21), lit("Night"))
@@ -201,22 +201,26 @@ class FareHarmonizer:
                 col("u.distance_km"),
                 col("u.fare_amount"),
                 col("t.tip_amount"),
-                col("t.precipitation").alias("rain_mm"),
-                col("t.snow_fall").alias("snow_mm"),
-                col("t.wind_speed").alias("wind_kmh"),
-                col("t.temperature").alias("temperature_celsius"),
+                col("u.precipitation").alias("rain_mm"),
+                col("u.snow_fall").alias("snow_mm"),
+                col("u.wind_speed").alias("wind_kmh"),
+                col("u.temperature").alias("temperature_celsius"),
                 "trip_duration_min",
-                "fare_per_km",
-                "fare_per_min",
-                "tip_pct",
+                round(col("fare_per_km"), 2).alias("fare_per_km"),
+                round(col("fare_per_min"), 2).alias("fare_per_min"),
+                round(col("tip_pct"), 2).alias("tip_pct"),
+                round(col("total_fareamount"), 2).alias("total_fareamount"),
                 "pickup_month",
                 "pickup_day",
                 "pickup_period",
-                "total_fareamount",
                 "rain_intensity",
                 "snow_intensity",
                 "wind_intensity",
-                "temperature_intensity"
+                "temperature_intensity",
+                col("u.pickup_borough"),
+                col("u.dropoff_borough"),
+                col("u.pickupboroughsource"),
+                col("u.dropoffboroughsource")
             )
         )
         return destinationdata

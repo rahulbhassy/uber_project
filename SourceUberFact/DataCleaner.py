@@ -7,11 +7,6 @@ from pyspark.sql import DataFrame, SparkSession
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 
-
-# Geospatial validation UDF
-def validate_coordinates(lat, lon):
-    return (40.4 <= lat <= 40.9) and (-74.3 <= lon <= -73.7)
-
 class DataCleaner:
     # map each source to its primary key column
     _KEY_COLUMNS = {
@@ -45,12 +40,10 @@ class DataCleaner:
         self,
         rawdata: DataFrame
     ):
-        coord_udf = udf(validate_coordinates, BooleanType())
         if self.table == "uberfares":
             return  rawdata \
                 .filter(
                 "pickup_latitude IS NOT NULL AND pickup_longitude IS NOT NULL AND dropoff_latitude IS NOT NULL AND dropoff_longitude IS NOT NULL") \
-                .filter(coord_udf(col("pickup_latitude"), col("pickup_longitude"))) \
                 .withColumn("passenger_count",
                             when(col("passenger_count").isNull(), 1)
                             .otherwise(col("passenger_count").cast("integer"))) \

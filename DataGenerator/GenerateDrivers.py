@@ -36,7 +36,7 @@ def generate_drivers(num_new_drivers):
             'date_of_birth': fake.date_of_birth(minimum_age=21, maximum_age=65),
             'hire_date': hire_date,
             'experience_level': random.choice(experience_levels),
-            'rating': round(random.uniform(3.5, 5.0), 1),
+            'rating': round(random.uniform(3.5, 5.0), 2),
             'status': random.choice(driver_statuses),
             'emergency_contact': fake.phone_number()
         })
@@ -51,7 +51,7 @@ def generate_historical_drivers(num_drivers=500):
 def main():
     print("Starting historical driver generation...")
 
-    NUM_DRIVERS = 160
+    NUM_DRIVERS = 250
     OUTPUT_FILENAME = "driverdetails.csv"
 
     # Generate drivers

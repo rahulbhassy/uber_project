@@ -13,7 +13,7 @@ SedonaContext.create(spark)
 sourceobjectuber = 'uberfares'
 sourceobjectborough = 'features'
 sourceobjecttrip = 'tripdetails'
-loadtype = 'delta'
+loadtype = 'full'
 
 readuberio = DataLakeIO(
     process='read',

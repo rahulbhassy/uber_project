@@ -11,14 +11,14 @@ def sourceschema(sourcedefinition: str) -> StructType:
     if sd == "uberfares":
         return StructType([
             StructField("trip_id", StringType(), False),
-            StructField("dropoff_datetime", TimestampType(), False),
-            StructField("fare_amount", DoubleType(), False),
             StructField("pickup_datetime", TimestampType(), False),
+            StructField("dropoff_datetime", TimestampType(), False),
             StructField("pickup_longitude", DoubleType(), False),
             StructField("pickup_latitude", DoubleType(), False),
             StructField("dropoff_longitude", DoubleType(), True),
             StructField("dropoff_latitude", DoubleType(), True),
             StructField("passenger_count", IntegerType(), True),
+            StructField("fare_amount", DoubleType(), False),
         ])
 
     if sd == "tripdetails":

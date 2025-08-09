@@ -10,7 +10,7 @@ from Shared.FileIO import SparkTableViewer
 
 
 setVEnv()
-table = 'uber'
+table = 'fares'
 spark = create_spark_session()
 loadtype = 'full'
 
@@ -18,7 +18,9 @@ fileio = DataLakeIO(
     table=table,
     process='read',
     loadtype=loadtype,
-    layer='enrich'
+    layer='enrich',
+    state='current',
+    runtype='prod'
 )
 reader = DataLoader(
     path=fileio.filepath(),
@@ -26,9 +28,9 @@ reader = DataLoader(
     loadtype=loadtype
 )
 df = reader.LoadData(spark=spark)
-df = df.filter(
-    df.fare_amount.isNull()
+
+writer = DataWriter(
+    loadtype=loadtype,
+    path=fileio.filepath(),
+    format='parquet'
 )
-print(df.count())
-viewer = SparkTableViewer(df=df)
-viewer.display()
