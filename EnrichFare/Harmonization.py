@@ -17,5 +17,6 @@ class PreHarmonizer:
         currentdata = reader.LoadData(spark=spark)
         self.sourcedata = self.sourcedata.join(
             currentdata,
-            on=['trip_id']
+            on=['trip_id'],
+            how='left_anti'
         )

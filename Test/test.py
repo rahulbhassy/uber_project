@@ -6,34 +6,29 @@ from SourceWeather.APILoader import WeatherAPI
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
 from Shared.DataLoader import DataLoader
+from Shared.FileIO import SparkTableViewer
 
 
 setVEnv()
-table = 'weatherdetails'
+table = 'uber'
 spark = create_spark_session()
 loadtype = 'full'
-init = Init(
-    loadtype=loadtype,
-    spark=spark,
-    table=table
-)
-df = init.Load()
-currentio = DataLakeIO(
-    process='write',
+
+fileio = DataLakeIO(
     table=table,
-    state='current',
-    layer='raw',
+    process='read',
     loadtype=loadtype,
+    layer='enrich'
 )
 reader = DataLoader(
-    path=currentio.filepath(),
-    filetype=currentio.file_ext(),
+    path=fileio.filepath(),
+    filetype=fileio.file_ext(),
     loadtype=loadtype
 )
-sourcedata = reader.LoadData(spark=spark)
-df = df.join(
-    sourcedata,
-    on=['date'],
-    how='left_anti'
+df = reader.LoadData(spark=spark)
+df = df.filter(
+    df.fare_amount.isNull()
 )
 print(df.count())
+viewer = SparkTableViewer(df=df)
+viewer.display()
