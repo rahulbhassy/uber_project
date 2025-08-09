@@ -1,49 +1,39 @@
-from sedona.spark import SedonaContext
-from Shared.sparkconfig import create_spark_session_sedona
 from Shared.pyspark_env import setVEnv
-from Shared.DataLoader import DataLoader
-from Shared.FileIO import SparkTableViewer
+from Shared.sparkconfig import create_spark_session
+from SourceWeather.Initialiser import Init
+from SourceWeather.Schema import weather_schema
+from SourceWeather.APILoader import WeatherAPI
 from Shared.FileIO import DataLakeIO
-from pyspark.sql.functions import date_format
+from Shared.DataWriter import DataWriter
+from Shared.DataLoader import DataLoader
+
 
 setVEnv()
-spark = create_spark_session_sedona()
-SedonaContext.create(spark)
-reader = DataLakeIO(
-    process='read',
-    table='uber',
+table = 'weatherdetails'
+spark = create_spark_session()
+loadtype = 'full'
+init = Init(
+    loadtype=loadtype,
+    spark=spark,
+    table=table
+)
+df = init.Load()
+currentio = DataLakeIO(
+    process='write',
+    table=table,
     state='current',
-    layer='enrich',
-    loadtype='full',
+    layer='raw',
+    loadtype=loadtype,
 )
-
-dataloader = DataLoader(
-    path=reader.filepath(),
-    filetype='delta',
+reader = DataLoader(
+    path=currentio.filepath(),
+    filetype=currentio.file_ext(),
+    loadtype=loadtype
 )
-df = dataloader.LoadData(spark=spark)
-
-count1 = df.filter(
-    (df.pickupboroughsource == 'tripdetails') &
-    (df.dropoffboroughsource == 'tripdetails')
-).count()
-count2 = df.filter(
-    (df.pickupboroughsource == 'features') &
-    (df.dropoffboroughsource == 'tripdetails')
-).count()
-count3 = df.filter(
-    (df.pickupboroughsource == 'tripdetails') &
-    (df.dropoffboroughsource == 'features')
-).count()
-count4 = df.filter(
-    (df.pickupboroughsource == 'features') &
-    (df.dropoffboroughsource == 'features')
-).count()
-print(f"Count of records with both boroughs from tripdetails: {count1}")
-print(f"Count of records with pickup borough from features and dropoff from tripdetails: {count2}")
-print(f"Count of records with pickup borough from tripdetails and dropoff from features: {count3}")
-print(f"Count of records with both boroughs from features: {count4}")
-
-df = df.groupBy('pickup_borough','dropoff_borough','pickupboroughsource','dropoffboroughsource').count()
-viewer = SparkTableViewer(df=df)
-viewer.display()
+sourcedata = reader.LoadData(spark=spark)
+df = df.join(
+    sourcedata,
+    on=['date'],
+    how='left_anti'
+)
+print(df.count())
