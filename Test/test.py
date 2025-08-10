@@ -29,8 +29,5 @@ reader = DataLoader(
 )
 df = reader.LoadData(spark=spark)
 
-writer = DataWriter(
-    loadtype=loadtype,
-    path=fileio.filepath(),
-    format='parquet'
-)
+viewer = SparkTableViewer(df=df)
+viewer.display()

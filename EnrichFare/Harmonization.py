@@ -196,16 +196,13 @@ class FareHarmonizer:
                 self.categorize_metric("temperature", self.temp_bins, self.temp_labels)
             ).select(
                 col("u.trip_id"),
+                col("u.date"),
                 col("u.pickup_datetime"),
                 col("u.dropoff_datetime"),
                 col("u.distance_km"),
+                "trip_duration_min",
                 col("u.fare_amount"),
                 col("t.tip_amount"),
-                col("u.precipitation").alias("rain_mm"),
-                col("u.snow_fall").alias("snow_mm"),
-                col("u.wind_speed").alias("wind_kmh"),
-                col("u.temperature").alias("temperature_celsius"),
-                "trip_duration_min",
                 round(col("fare_per_km"), 2).alias("fare_per_km"),
                 round(col("fare_per_min"), 2).alias("fare_per_min"),
                 round(col("tip_pct"), 2).alias("tip_pct"),
