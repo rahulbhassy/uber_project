@@ -222,9 +222,16 @@ class FareHarmonizer:
         )
         return destinationdata
 
+class WeatherImpactHarmonizer:
+    def __init__(self,loadtype: str,runtype: str = 'full'):
+        self.loadtype = loadtype
+        self.runtype = runtype
+
+
 class Harmonizer:
     _harmonizer_map = {
-        "fares": FareHarmonizer
+        "fares": FareHarmonizer,
+        "weatherimpact": WeatherImpactHarmonizer
     }
 
     def __init__(self,table,loadtype: str,runtype: str = 'full'):
