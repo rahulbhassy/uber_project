@@ -26,7 +26,8 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
     logger.info("Starting enrichment flow for Group 1")
     enrich_grp1_processing_flow(
         load_type=load_type,
-        runtype=runtype
+        runtype=runtype,
+        wait_for=[raw_processing_flow]
     )
 
 if __name__ == "__main__":

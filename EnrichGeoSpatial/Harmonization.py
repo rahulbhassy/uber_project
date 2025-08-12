@@ -106,6 +106,7 @@ class Harmonizer:
                 col("u.date"),
                 col("u.trip_id"),
                 col("u.dropoff_datetime"),
+                col("u.pickup_datetime"),
                 col("u.fare_amount"),
                 col("u.passenger_count"),
                 col("u.pickup_hour"),

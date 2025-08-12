@@ -6,34 +6,35 @@ from SourceWeather.APILoader import WeatherAPI
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
 from Shared.DataLoader import DataLoader
+from Shared.FileIO import SparkTableViewer
+from pyspark.sql.functions import avg, col, lit , round
 
 
 setVEnv()
-table = 'weatherdetails'
+table = 'fares'
 spark = create_spark_session()
 loadtype = 'full'
-init = Init(
-    loadtype=loadtype,
-    spark=spark,
-    table=table
-)
-df = init.Load()
-currentio = DataLakeIO(
-    process='write',
+
+fileio = DataLakeIO(
     table=table,
-    state='current',
-    layer='raw',
+    process='read',
     loadtype=loadtype,
+    layer='enrich',
+    state='current',
+    runtype='dev'
 )
 reader = DataLoader(
-    path=currentio.filepath(),
-    filetype=currentio.file_ext(),
+    path=fileio.filepath(),
+    filetype=fileio.file_ext(),
     loadtype=loadtype
 )
-sourcedata = reader.LoadData(spark=spark)
-df = df.join(
-    sourcedata,
-    on=['date'],
-    how='left_anti'
+df = reader.LoadData(spark=spark)
+df = df.filter(
+    df.is_weather_extreme == False
+).groupBy('pickup_borough','dropoff_borough').agg(
+    round(avg('fare_amount'),2).alias('avg_fare_amount'),
+    round(avg('trip_duration_min'),2).alias('avg_trip_duration_min')
 )
-print(df.count())
+
+viewer = SparkTableViewer(df=df)
+viewer.display()

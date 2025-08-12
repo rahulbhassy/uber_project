@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/DataGenerator" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/EnrichGeoSpatial" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/NoteBooks" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/EnrichFare" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.10 (uber_project)" jdkType="Python SDK" />
