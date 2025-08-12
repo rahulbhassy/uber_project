@@ -7,6 +7,7 @@ from dash_bootstrap_components import Card, CardBody
 from pyspark.sql import DataFrame
 from shapely.geometry import Point, Polygon, LineString
 from pyspark.sql import SparkSession
+from Shared.DataLoader import DataLoader
 
 # -- CONFIG --
 import os
@@ -348,3 +349,40 @@ class SparkTableViewer:
 
         app.run(host=host, port=port, debug=debug)
 
+class SourceObjectAssignment:
+    def __init__(self,loadtype: str, sourcetables: List[str],runtype: str = 'full'):
+        self.loadtype = loadtype
+        self.runtype = runtype
+        self.sourcetables = sourcetables
+
+    def assign_DataLakeIO(self,layer: dict):
+        """Assigns DataLakeIO objects to each source table based on the load type and runtime type"""
+        io_map = {}
+        for table in self.sourcetables:
+            self.io_map[table] = DataLakeIO(
+                process='read',
+                table=table,
+                loadtype=self.loadtype,
+                state='current',
+                layer=layer.get(table),
+                runtype=self.runtype
+            )
+        return io_map
+
+    def assign_Readers(self,io_map: dict):
+        """Creates DataLoader instances for each source table"""
+        readers = {}
+        for table, io in io_map.items():
+            readers[table] = DataLoader(
+                path=io.filepath(),
+                filetype=io.file_ext(),
+                loadtype=self.loadtype,
+            )
+        return readers
+
+    def getData(self, spark: SparkSession, readers: dict):
+        """Loads data from all source tables into a dictionary of DataFrames"""
+        dataframes = {}
+        for table, reader in readers.items():
+            dataframes[table] = reader.LoadData(spark=spark)
+        return dataframes

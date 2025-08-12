@@ -5,33 +5,27 @@ from pyspark.sql.functions import col, unix_timestamp
 from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
+from EnrichFare.Config import layer
+
+
 
 class PreHarmonizer:
-    def __init__(self,sourcedata: DataFrame,currentio: DataLakeIO, loadtype: str):
+    def __init__(self,sourcedata: DataFrame,currentdata: DataFrame, loadtype: str):
         self.sourcedata = sourcedata
-        self.currentio = currentio
         self.loadtype = loadtype
+        self.currentdata = currentdata
 
-    def preharmonize(self,spark: SparkSession,keycolumn: List[str]):
-        reader = DataLoader(
-            path=self.currentio.filepath(),
-            filetype=self.currentio.file_ext(),
-            loadtype=self.loadtype
-        )
-        currentdata = reader.LoadData(spark=spark)
+    def preharmonize(self,keycolumn: List[str]):
+
         self.sourcedata = self.sourcedata.join(
-            currentdata,
+            self.currentdata,
             on=keycolumn,
             how='left_anti'
         )
         return self.sourcedata
 
 class FareHarmonizer:
-    _LAYER = {
-        "uber" : "enrich",
-        "tripdetails" : "raw",
-        "fares" : "enrich"
-    }
+
     _month_map = {
         1: "January", 2: "February", 3: "March", 4: "April",
         5: "May", 6: "June", 7: "July", 8: "August",
@@ -64,30 +58,6 @@ class FareHarmonizer:
     def __init__(self,loadtype: str,runtype: str = 'full'):
         self.loadtype = loadtype
         self.runtype = runtype
-        self.uberio = DataLakeIO(
-            process='read',
-            table='uber',
-            loadtype=self.loadtype,
-            state='current',
-            layer=self._LAYER.get('uber'),
-            runtype=self.runtype
-        )
-        self.tripio = DataLakeIO(
-            process='read',
-            table='tripdetails',
-            loadtype=self.loadtype,
-            state='current',
-            layer=self._LAYER.get('tripdetails'),
-            runtype=self.runtype
-        )
-        self.currentio = DataLakeIO(
-            process='read',
-            table='fares',
-            loadtype=self.loadtype,
-            state='current',
-            layer=self._LAYER.get('fares'),
-            runtype=self.runtype
-        )
         self.mapping_monthexpr = create_map([lit(x) for pair in self._month_map.items() for x in pair])
         self.mapping_dayexpr = create_map([lit(x) for pair in self._day_map.items() for x in pair])
 
@@ -108,34 +78,30 @@ class FareHarmonizer:
         expr = expr.otherwise(lit(labels[-1]))
         return expr
 
-    def harmonize(self, spark: SparkSession) -> DataFrame:
+    def harmonize(self, spark: SparkSession,dataframes: dict,currentio: DataLakeIO = None) -> DataFrame:
         # Implement fare harmonization logic here
-        uberreader = DataLoader(
-            path=self.uberio.filepath(),
-            filetype='delta',
-            loadtype=self.loadtype
-        )
-        tripreader = DataLoader(
-            path=self.tripio.filepath(),
-            filetype='delta',
-            loadtype=self.loadtype
-        )
-        uberdf  = uberreader.LoadData(spark=spark)
-        tripdf = tripreader.LoadData(spark=spark)
         # Pre-harmonization step
+        uberdf = dataframes.get('uber')
+        tripdf = dataframes.get('tripdetails')
         if self.loadtype == 'delta':
+            reader = DataLoader(
+                path=currentio.filepath(),
+                filetype=currentio.file_ext(),
+                loadtype= self.loadtype
+            )
+            currentdata = reader.LoadData(spark=spark)
             uberph = PreHarmonizer(
                 sourcedata=uberdf,
-                currentio=self.currentio,
+                currentdata=currentdata,
                 loadtype=self.loadtype
             )
             tripph = PreHarmonizer(
                 sourcedata=tripdf,
-                currentio=self.currentio,
+                currentdata=currentdata,
                 loadtype=self.loadtype
             )
-            uberdf = uberph.preharmonize(spark=spark,keycolumn=['trip_id'])
-            tripdf = tripph.preharmonize(spark=spark,keycolumn=['trip_id'])
+            uberdf = uberph.preharmonize(keycolumn=['trip_id'])
+            tripdf = tripph.preharmonize(keycolumn=['trip_id'])
 
         destinationdata = (
             uberdf.alias('u').join(
@@ -247,8 +213,12 @@ class Harmonizer:
             runtype=self.runtype
         )
 
-    def harmonize(self,spark: SparkSession) -> DataFrame:
+    def harmonize(self,spark: SparkSession ,dataframes: dict, currentio: DataLakeIO) -> DataFrame:
         """Instance method to harmonize data using the selected harmonizer"""
-        return self.harmonizer_instance.harmonize(spark=spark)
+        return self.harmonizer_instance.harmonize(
+            spark=spark,
+            dataframes=dataframes,
+            currentio=currentio
+        )
 
 
