@@ -1,7 +1,7 @@
-from typing import List
+from typing import List, Optional
 from pyspark.sql import *
 from pyspark.sql.functions import create_map, lit, coalesce , when ,round
-from pyspark.sql.functions import col, unix_timestamp
+from pyspark.sql.functions import col, unix_timestamp , avg
 from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
@@ -77,7 +77,7 @@ class FareHarmonizer:
         expr = expr.otherwise(lit(labels[-1]))
         return expr
 
-    def harmonize(self, spark: SparkSession,dataframes: dict,currentio: DataLakeIO = None) -> DataFrame:
+    def harmonize(self, spark: SparkSession,dataframes: dict,currentio: Optional[DataLakeIO]) -> DataFrame:
         # Implement fare harmonization logic here
         # Pre-harmonization step
         uberdf = dataframes.get('uber')
@@ -136,7 +136,7 @@ class FareHarmonizer:
             ).withColumn(
         "pickup_period",
                  when(col("pickup_hour").isNull(), lit("Unknown"))
-                .when((col("pickup_hour") >= 1) & (col("pickup_hour") <= 3), lit("After Midnight"))
+                .when((col("pickup_hour") >= 0) & (col("pickup_hour") <= 3), lit("After Midnight"))
                 .when((col("pickup_hour") > 3) & (col("pickup_hour") <= 5), lit("Early Morning"))
                 .when((col("pickup_hour") > 5) & (col("pickup_hour") <= 9), lit("Morning Rush"))
                 .when((col("pickup_hour") > 9) & (col("pickup_hour") <= 15), lit("Midday"))
@@ -198,9 +198,93 @@ class FareHarmonizer:
         return destinationdata
 
 class WeatherImpactHarmonizer:
-    def __init__(self,loadtype: str,runtype: str = 'full'):
+    def __init__(self,loadtype: str,runtype: str = 'dev'):
         self.loadtype = loadtype
         self.runtype = runtype
+
+    def harmonize(self, spark: SparkSession, dataframes: dict , currentio: Optional[DataLakeIO]) -> DataFrame:
+        # Implement weather impact harmonization logic here
+        fares = dataframes.get('fares')
+        trip = dataframes.get('tripdetails').select('trip_id','trip_status','driver_rating')
+        expected = fares.filter(
+            col('is_weather_extreme') == False
+        ).groupBy(
+            'pickup_borough', 'dropoff_borough','pickup_period'
+        ).agg(
+            round(avg('fare_amount'), 2).alias('expected_fare_amount'),
+            round(avg('trip_duration_min'), 2).alias('expected_trip_duration_min')
+        )
+        weatherimpact = fares.alias('f').join(
+            trip.alias('t'),
+            on='trip_id',
+            how='inner'
+        ).join(
+            expected.alias('e'),
+            on=['pickup_borough', 'dropoff_borough','pickup_period'],
+            how='left'
+        ).withColumn(
+            'fare_amount_diff',
+            when(
+                (col('f.is_weather_extreme') == True) & (col('f.fare_amount') > col('e.expected_fare_amount')),
+                col('f.fare_amount') - col('e.expected_fare_amount')
+            ).otherwise(lit(0))
+        ).withColumn(
+            'tip_duration_diff',
+            when(
+                (col('f.is_weather_extreme') == True) & (col('f.trip_duration_min') > col('e.expected_trip_duration_min')),
+                col('f.trip_duration_min') - col('e.expected_trip_duration_min')
+            ).otherwise(lit(0))
+        ).withColumn(
+            'fare_amount_pct_diff',
+            when(
+                col('e.expected_fare_amount') > 0,
+                (col('fare_amount_diff') / col('e.expected_fare_amount')) * 100
+            ).otherwise(lit(0))
+        ).withColumn(
+            'trip_duration_pct_diff',
+            when(
+                col('e.expected_trip_duration_min') > 0,
+                (col('tip_duration_diff') / col('e.expected_trip_duration_min')) * 100
+            ).otherwise(lit(0))
+        ).withColumn(
+            "low_rating_due_to_weather",
+             when(
+                 (col("t.driver_rating") < 3) & (col("f.is_weather_extreme") == True), True
+             ).otherwise(False)
+        ).withColumn(
+            "cancellation_due_to_weather",
+            when(
+                (col("trip_status") == "cancelled") & (col("f.is_weather_extreme") == True),
+                True
+            ).otherwise(False)
+        ).select(
+            col("f.trip_id"),
+            col("f.date"),
+            col("f.pickup_datetime"),
+            col("f.dropoff_datetime"),
+            col("f.trip_duration_min"),
+            col("f.fare_amount"),
+            col("e.expected_fare_amount").alias("expected_fare_amount"),
+            col("e.expected_trip_duration_min").alias("expected_trip_duration_min"),
+            round(col("fare_amount_diff"), 2).alias("fare_amount_diff"),
+            round(col("tip_duration_diff"), 2).alias("tip_duration_diff"),
+            round(col("fare_amount_pct_diff"), 2).alias("fare_amount_pct_diff"),
+            round(col("trip_duration_pct_diff"), 2).alias("trip_duration_pct_diff"),
+            col("f.pickup_period"),
+            col("f.rain_intensity"),
+            col("f.snow_intensity"),
+            col("f.wind_intensity"),
+            col("f.temperature_intensity"),
+            col("f.is_weather_extreme"),
+            col("t.driver_rating"),
+            col("low_rating_due_to_weather"),
+            col("t.trip_status"),
+            col("cancellation_due_to_weather"),
+            col("f.pickup_borough"),
+            col("f.dropoff_borough")
+        )
+
+        return weatherimpact
 
 
 class Harmonizer:
@@ -222,7 +306,7 @@ class Harmonizer:
             runtype=self.runtype
         )
 
-    def harmonize(self,spark: SparkSession ,dataframes: dict, currentio: DataLakeIO) -> DataFrame:
+    def harmonize(self,spark: SparkSession ,dataframes: dict, currentio: Optional[DataLakeIO]) -> DataFrame:
         """Instance method to harmonize data using the selected harmonizer"""
         return self.harmonizer_instance.harmonize(
             spark=spark,

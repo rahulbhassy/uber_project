@@ -116,7 +116,7 @@ class DataLakeIO:
 
 class IntermediateIO:
     _TABLES = frozenset([
-        "uberfares", "tripdetails", "driverdetails",
+        "uberfares", "tripdetails", "driverdetails", "weatherimpact",
         "customerdetails", "vehicledetails", "uber","features", "weatherdetails" , "fares"
     ])
 

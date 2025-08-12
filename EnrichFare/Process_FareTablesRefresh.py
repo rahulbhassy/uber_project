@@ -7,7 +7,7 @@ from EnrichFare.Config import config, layer
 
 setVEnv()
 spark = create_spark_session()
-table = 'fares'
+table = 'weatherimpact'
 loadtype = 'full'
 runtype = 'dev'
 

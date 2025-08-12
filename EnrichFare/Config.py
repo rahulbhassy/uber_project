@@ -1,6 +1,6 @@
 config = {
     "fares" : ["uber","tripdetails"],
-    "weatherimpact" : ["fares"]
+    "weatherimpact" : ["fares","tripdetails"]
 }
 layer = {
     "uber" : "enrich",
