@@ -11,7 +11,7 @@ from pyspark.sql.functions import avg, col, lit , round
 
 
 setVEnv()
-table = 'weatherimpact'
+table = 'uber'
 spark = create_spark_session()
 loadtype = 'full'
 
@@ -21,7 +21,6 @@ fileio = DataLakeIO(
     loadtype=loadtype,
     layer='enrich',
     state='current',
-    runtype='dev'
 )
 reader = DataLoader(
     path=fileio.filepath(),
