@@ -359,7 +359,7 @@ class SourceObjectAssignment:
         """Assigns DataLakeIO objects to each source table based on the load type and runtime type"""
         io_map = {}
         for table in self.sourcetables:
-            self.io_map[table] = DataLakeIO(
+            io_map[table] = DataLakeIO(
                 process='read',
                 table=table,
                 loadtype=self.loadtype,

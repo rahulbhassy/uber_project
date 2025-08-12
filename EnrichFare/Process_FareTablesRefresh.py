@@ -9,7 +9,7 @@ setVEnv()
 spark = create_spark_session()
 table = 'fares'
 loadtype = 'full'
-runtype = 'prod'
+runtype = 'dev'
 
 sourcetables = config[table]
 sourceobjectassignments = SourceObjectAssignment(

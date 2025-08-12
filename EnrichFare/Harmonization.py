@@ -160,6 +160,15 @@ class FareHarmonizer:
             ).withColumn(
                 "temperature_intensity",
                 self.categorize_metric("temperature", self.temp_bins, self.temp_labels)
+            ).withColumn(
+                "is_weather_extreme",
+                when(
+                    (col("rain_intensity").isin("Heavy Rain","Medium Rain")) |
+                    (col("snow_intensity").isin("Heavy Snow","Medium Snow")) |
+                    (col("wind_intensity") == "Heavy Wind") |
+                    (col("temperature_intensity").isin("Extreme Heat", "Freezing","Very Cold","Hot")),
+                    lit(True)
+                ).otherwise(lit(False))
             ).select(
                 col("u.trip_id"),
                 col("u.date"),
@@ -180,6 +189,7 @@ class FareHarmonizer:
                 "snow_intensity",
                 "wind_intensity",
                 "temperature_intensity",
+                "is_weather_extreme",
                 col("u.pickup_borough"),
                 col("u.dropoff_borough"),
                 col("u.pickupboroughsource"),
