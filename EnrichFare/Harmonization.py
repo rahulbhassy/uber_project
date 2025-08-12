@@ -5,7 +5,6 @@ from pyspark.sql.functions import col, unix_timestamp
 from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
-from EnrichFare.Config import layer
 
 
 

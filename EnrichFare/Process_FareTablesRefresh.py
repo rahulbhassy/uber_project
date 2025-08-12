@@ -29,7 +29,7 @@ currentio = DataLakeIO(
     process='write',
     table=table,
     state='current',
-    layer='enrich',
+    layer=layer.get(table),
     loadtype=loadtype,
     runtype=runtype
 )
