@@ -404,9 +404,9 @@ class TimeSeriesHarmonizer:
         ).groupBy(
             'pickup_year','pickup_period'
         ).agg(
-            count('trip_id').alias('peak_hour_trip_count'),
-            avg('fare_amount').alias('peak_hour_avg_fare_amount'),
-            avg('trip_duration_min').alias('peak_hour_avg_trip_duration_min')
+            count('trip_id').alias('non_peak_hour_trip_count'),
+            avg('fare_amount').alias('non_peak_hour_avg_fare_amount'),
+            avg('trip_duration_min').alias('non_peak_hour_avg_trip_duration_min')
         ).withColumn(
             'pickup_period',
             when(col('pickup_period').isNull(), lit('Unknown'))
