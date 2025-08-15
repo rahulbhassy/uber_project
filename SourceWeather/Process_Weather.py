@@ -10,7 +10,7 @@ from Shared.DataWriter import DataWriter
 setVEnv()
 table = 'weatherdetails'
 spark = create_spark_session()
-loadtype = 'delta'
+loadtype = 'full'
 init = Init(
     loadtype=loadtype,
     spark=spark,

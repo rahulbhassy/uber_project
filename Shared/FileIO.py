@@ -116,8 +116,8 @@ class DataLakeIO:
 
 class IntermediateIO:
     _TABLES = frozenset([
-        "uberfares", "tripdetails", "driverdetails",
-        "customerdetails", "vehicledetails", "uber","features", "weatherdetails" , "fares"
+        "uberfares", "tripdetails", "driverdetails", "weatherimpact",
+        "customerdetails", "vehicledetails", "uber","features", "weatherdetails" , "fares" , "timeseries"
     ])
 
     def __init__(self, fullpath: str, date: str = None):

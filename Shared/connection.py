@@ -1,4 +1,4 @@
-JDBC_URL = "jdbc:mysql://localhost:3306/uber_analysis"
+JDBC_URL = "jdbc:mysql://localhost:3306/"
 
 JDBC_PROPERTIES = {
     "user": "root",

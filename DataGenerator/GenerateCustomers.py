@@ -53,7 +53,7 @@ def main():
     print("Starting historical customer generation...")
 
     # Configuration
-    NUM_CUSTOMERS = 2400
+    NUM_CUSTOMERS = 10000
     OUTPUT_FILENAME = "customerdetails.csv"
 
     # Generate customers

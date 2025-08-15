@@ -7,9 +7,9 @@ from EnrichFare.Config import config, layer
 
 setVEnv()
 spark = create_spark_session()
-table = 'fares'
+table = 'timeseries'
 loadtype = 'full'
-runtype = 'dev'
+runtype = 'prod'
 
 sourcetables = config[table]
 sourceobjectassignments = SourceObjectAssignment(
