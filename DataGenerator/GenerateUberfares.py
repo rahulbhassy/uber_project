@@ -1,10 +1,3 @@
-"""
-Optimized Uber NYC Data Generator
-Generates 2,000,000 Uber trip records with dynamic pricing and embedded fraud patterns
-Columns: key, dropoff_datetime, fare_amount, pickup_datetime, pickup_longitude,
-          pickup_latitude, dropoff_longitude, dropoff_latitude, passenger_count
-"""
-
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -12,7 +5,7 @@ import random
 import os
 import math
 
-# Configuration for fare calculation and fraud patterns
+# Enhanced fare configuration with dynamic factors
 FARE_CONFIG = {
     'base_fare': 2.5,
     'per_km_rates': {
@@ -28,6 +21,20 @@ FARE_CONFIG = {
         'hybrid': 0.15,
         'ev': 0.05
     },
+    'dynamic_factors': {
+        'yearly_increase': 0.03,  # 3% annual fare increase
+        'semiannual_increase': 0.015,  # 1.5% increase every 6 months
+        'weekend_surcharge': 0.15,  # 15% weekend premium
+        'late_night_surcharge': 0.20,  # 20% late night premium
+        'passenger_surcharge': 0.5,  # $0.50 per additional passenger
+        'weather_impact': {
+            'Clear': 1.0,
+            'Rain': 1.15,
+            'Snow': 1.25,
+            'Fog': 1.10,
+            'Storm': 1.30
+        }
+    },
     'fraud_params': {
         'fraud_rate': 0.015,  # 1.5% of trips have fraud patterns
         'distance_multiplier_range': (1.15, 1.8),
@@ -40,71 +47,138 @@ FARE_CONFIG = {
 }
 
 
-def generate_uber_nyc_data(total_rows=2000000, output_filename="uber_nyc_2million_rows.csv"):
-    """
-    Generate realistic Uber NYC trip data with dynamic pricing
+# Weather data generation (simulated)
+def generate_weather_data(start_date, end_date):
+    """Generate daily weather conditions for date range"""
+    dates = pd.date_range(start=start_date, end=end_date)
+    conditions = ['Clear', 'Rain', 'Snow', 'Fog', 'Storm']
+    weights = [0.60, 0.20, 0.05, 0.10, 0.05]  # Probability distribution
 
-    Parameters:
-    total_rows (int): Number of rows to generate (default: 2,000,000)
-    output_filename (str): Output CSV filename
-    """
+    weather_data = {
+        'date': dates,
+        'condition': np.random.choice(conditions, size=len(dates), p=weights)
+    }
 
-    print(f"Generating {total_rows:,} Uber NYC trip records...")
+    weather_df = pd.DataFrame(weather_data)
+    weather_df['date'] = pd.to_datetime(weather_df['date']).dt.date
+    return weather_df.set_index('date')
 
-    # Set random seed for reproducibility
-    np.random.seed(42)
-    random.seed(42)
 
-    # Generate 150+ NYC boroughs and municipalities
-    nyc_areas = generate_nyc_areas()
-    areas = list(nyc_areas.keys())
+# Time-based fare adjustments
+def get_time_based_multiplier(pickup_dt):
+    """Calculate dynamic fare multipliers based on time factors"""
+    multiplier = 1.0
 
-    # Area distribution weights (most trips in main boroughs)
-    area_weights = calculate_area_weights(areas)
-
-    print(f"Using {len(areas)} boroughs/municipalities with weighted distribution")
-
-    # Generate data in batches to manage memory
-    batch_size = 100000  # 100k rows per batch
-    num_batches = total_rows // batch_size
-
-    print(f"Processing in {num_batches} batches of {batch_size:,} rows each...")
-
-    # Initialize CSV file
-    first_batch = True
-
-    for batch_num in range(num_batches):
-        print(f"Processing batch {batch_num + 1}/{num_batches}...")
-
-        # Generate batch data
-        batch_data = generate_batch(batch_size, nyc_areas, areas, area_weights)
-
-        # Convert to DataFrame
-        batch_df = pd.DataFrame(batch_data)
-
-        # Save batch to CSV
-        if first_batch:
-            batch_df.to_csv(output_filename, mode='w', index=False)
-            first_batch = False
+    # Weekend premium (Friday 6PM to Sunday 11PM)
+    if pickup_dt.weekday() == 4 and pickup_dt.hour >= 18:  # Friday evening
+        multiplier *= (1 + FARE_CONFIG['dynamic_factors']['weekend_surcharge'])
+    elif pickup_dt.weekday() in [5, 6]:  # Saturday or Sunday
+        if pickup_dt.weekday() == 6 and pickup_dt.hour >= 23:  # Sunday after 11PM
+            pass  # No premium
         else:
-            batch_df.to_csv(output_filename, mode='a', index=False, header=False)
+            multiplier *= (1 + FARE_CONFIG['dynamic_factors']['weekend_surcharge'])
 
-        print(f"  Saved batch {batch_num + 1}. Total progress: {(batch_num + 1) * batch_size:,}/{total_rows:,} rows")
+    # Late night premium (10PM-5AM)
+    if 22 <= pickup_dt.hour or pickup_dt.hour < 5:
+        multiplier *= (1 + FARE_CONFIG['dynamic_factors']['late_night_surcharge'])
 
-    # Verify the final file
-    print(f"\nDataset generation complete!")
-    print(f"Output file: {output_filename}")
+    # Rush hour premium (7-10AM, 4-7PM)
+    if (7 <= pickup_dt.hour < 10) or (16 <= pickup_dt.hour < 19):
+        multiplier *= 1.15
 
-    # Get file statistics
-    file_size_mb = os.path.getsize(output_filename) / (1024 * 1024)
-    print(f"File size: {file_size_mb:.1f} MB")
+    return multiplier
 
-    # Show sample data
-    sample_df = pd.read_csv(output_filename, nrows=5)
-    print(f"\nFirst 5 rows of generated dataset:")
-    print(sample_df)
 
-    return output_filename
+# Annual fare adjustments
+def get_yearly_adjustment(pickup_dt, base_value):
+    """Apply annual and semi-annual fare increases"""
+    # Calculate months since January 2009
+    months_since_start = (pickup_dt.year - 2009) * 12 + pickup_dt.month - 1
+
+    # Calculate number of full years
+    years = pickup_dt.year - 2009
+
+    # Apply yearly compounding increase
+    adjusted = base_value * (1 + FARE_CONFIG['dynamic_factors']['yearly_increase']) ** years
+
+    # Apply semi-annual compounding increases
+    semi_annual_increases = months_since_start // 6
+    return adjusted * (1 + FARE_CONFIG['dynamic_factors']['semiannual_increase']) ** semi_annual_increases
+
+
+# Passenger-based adjustments
+def get_passenger_surcharge(passenger_count):
+    """Apply surcharge for additional passengers"""
+    if passenger_count <= 2:
+        return 0
+    return (passenger_count - 2) * FARE_CONFIG['dynamic_factors']['passenger_surcharge']
+
+
+# Main fare calculation with enhancements
+def calculate_fares_with_embedded_fraud(distances, durations, pickup_datetimes, passenger_counts, weather_df):
+    """Enhanced fare calculation with dynamic factors"""
+    base_fare = FARE_CONFIG['base_fare']
+    per_minute_rate = FARE_CONFIG['per_minute_rate']
+    fare_amounts = np.zeros(len(distances))
+
+    for i in range(len(distances)):
+        # Time-based adjustments
+        pickup_dt = datetime.strptime(pickup_datetimes[i], "%Y-%m-%d %H:%M:%S UTC")
+        time_multiplier = get_time_based_multiplier(pickup_dt)
+
+        # Vehicle selection
+        fuel_type = random.choices(
+            ['petrol', 'diesel', 'hybrid', 'ev'],
+            weights=[0.35, 0.35, 0.20, 0.10]
+        )[0]
+
+        # Annual inflation adjustments
+        adj_base_fare = get_yearly_adjustment(pickup_dt, base_fare)
+        adj_per_km = get_yearly_adjustment(pickup_dt, FARE_CONFIG['per_km_rates'][fuel_type])
+        adj_per_minute = get_yearly_adjustment(pickup_dt, per_minute_rate)
+        adj_fuel_surcharge = get_yearly_adjustment(pickup_dt, FARE_CONFIG['fuel_surcharge'][fuel_type])
+
+        # Base fare calculation
+        fare = adj_base_fare + (distances[i] * adj_per_km) + (durations[i] * adj_per_minute) + adj_fuel_surcharge
+
+        # Weather adjustments
+        weather_date = pickup_dt.date()
+        try:
+            weather_condition = weather_df.loc[weather_date, 'condition']
+        except KeyError:
+            weather_condition = 'Clear'  # Default to clear if date missing
+
+        weather_multiplier = FARE_CONFIG['dynamic_factors']['weather_impact'][weather_condition]
+
+        # Apply multipliers
+        fare *= time_multiplier * weather_multiplier
+
+        # Passenger surcharge
+        fare += get_passenger_surcharge(passenger_counts[i])
+
+        # Fraud detection patterns
+        if random.random() < FARE_CONFIG['fraud_params']['fraud_rate']:
+            # Short trip fraud - inflate distance
+            if distances[i] < FARE_CONFIG['fraud_params']['short_trip_threshold']:
+                multiplier = random.uniform(*FARE_CONFIG['fraud_params']['distance_multiplier_range'])
+                fare = adj_base_fare + (distances[i] * adj_per_km * multiplier) + \
+                       (durations[i] * adj_per_minute) + adj_fuel_surcharge
+            # Long trip fraud - inflate time
+            elif distances[i] > FARE_CONFIG['fraud_params']['long_trip_threshold']:
+                multiplier = random.uniform(*FARE_CONFIG['fraud_params']['time_multiplier_range'])
+                fare = adj_base_fare + (distances[i] * adj_per_km) + \
+                       (durations[i] * adj_per_minute * multiplier) + adj_fuel_surcharge
+            # Medium trip fraud - inflate both
+            else:
+                dist_mult = random.uniform(1.05, 1.3)
+                time_mult = random.uniform(1.05, 1.4)
+                fare = adj_base_fare + (distances[i] * adj_per_km * dist_mult) + \
+                       (durations[i] * adj_per_minute * time_mult) + adj_fuel_surcharge
+
+        # Minimum fare guarantee
+        fare_amounts[i] = max(4.0, fare)
+
+    return fare_amounts
 
 
 def generate_nyc_areas():
@@ -205,61 +279,6 @@ def calculate_area_weights(areas):
     return {area: weight / total for area, weight in weights.items()}
 
 
-def generate_batch(batch_size, nyc_areas, areas, area_weights):
-    """Generate a batch of trip data with only required columns"""
-    # Generate unique keys
-    keys = np.random.randint(10000000, 99999999, size=batch_size)
-
-    # Select pickup and dropoff areas
-    pickup_areas = np.random.choice(
-        list(area_weights.keys()),
-        size=batch_size,
-        p=list(area_weights.values())
-    )
-
-    # 70% chance dropoff is same area, 30% different area
-    same_area_mask = np.random.random(batch_size) < 0.7
-    dropoff_areas = np.where(
-        same_area_mask,
-        pickup_areas,
-        np.random.choice(list(area_weights.keys()), size=batch_size, p=list(area_weights.values()))
-    )
-
-    # Generate coordinates
-    pickup_lats, pickup_lons = generate_coordinates_batch(pickup_areas, nyc_areas)
-    dropoff_lats, dropoff_lons = generate_coordinates_batch(dropoff_areas, nyc_areas)
-
-    # Generate passenger counts (realistic distribution)
-    passenger_counts = np.random.choice([1, 2, 3, 4, 5, 6], size=batch_size,
-                                        p=[0.6, 0.25, 0.08, 0.04, 0.02, 0.01])
-
-    # Generate datetimes (2009-2015 range)
-    pickup_datetimes, dropoff_datetimes, durations = generate_datetimes_batch(batch_size)
-
-    # Calculate realistic distances
-    distances = calculate_haversine_distances(pickup_lats, pickup_lons, dropoff_lats, dropoff_lons)
-
-    # Calculate fares with dynamic pricing and embedded fraud patterns
-    fare_amounts = calculate_fares_with_embedded_fraud(
-        distances,
-        durations,
-        pickup_datetimes
-    )
-
-    # Return batch data with only required columns
-    return {
-        'key': keys,
-        'pickup_datetime': pickup_datetimes,
-        'dropoff_datetime': dropoff_datetimes,
-        'pickup_longitude': np.round(pickup_lons, 6),
-        'pickup_latitude': np.round(pickup_lats, 6),
-        'dropoff_longitude': np.round(dropoff_lons, 6),
-        'dropoff_latitude': np.round(dropoff_lats, 6),
-        'passenger_count': passenger_counts,
-        'fare_amount': np.round(fare_amounts, 2)
-    }
-
-
 def generate_coordinates_batch(areas_array, nyc_areas):
     """Generate coordinates for a batch based on area assignments"""
     lats = np.zeros(len(areas_array))
@@ -323,88 +342,150 @@ def calculate_haversine_distances(lat1, lon1, lat2, lon2):
     return c * r
 
 
-def calculate_fares_with_embedded_fraud(distances, durations, pickup_datetimes):
-    """Calculate fare amounts with embedded fraud patterns"""
-    base_fare = FARE_CONFIG['base_fare']
-    per_minute_rate = FARE_CONFIG['per_minute_rate']
+def generate_batch(batch_size, nyc_areas, areas, area_weights, weather_df):
+    """Generate a batch of trip data with only required columns"""
+    # Generate unique keys
+    keys = np.random.randint(10000000, 99999999, size=batch_size)
 
-    # Initialize arrays
-    fare_amounts = np.zeros(len(distances))
+    # Select pickup and dropoff areas
+    pickup_areas = np.random.choice(
+        list(area_weights.keys()),
+        size=batch_size,
+        p=list(area_weights.values())
+    )
 
-    for i in range(len(distances)):
-        # Randomly assign vehicle fuel type for this trip
-        fuel_type = random.choices(
-            ['petrol', 'diesel', 'hybrid', 'ev'],
-            weights=[0.35, 0.35, 0.20, 0.10]
-        )[0]
+    # 70% chance dropoff is same area, 30% different area
+    same_area_mask = np.random.random(batch_size) < 0.7
+    dropoff_areas = np.where(
+        same_area_mask,
+        pickup_areas,
+        np.random.choice(list(area_weights.keys()), size=batch_size, p=list(area_weights.values()))
+    )
 
-        # Get vehicle-specific rates
-        per_km_rate = FARE_CONFIG['per_km_rates'][fuel_type]
-        fuel_surcharge = FARE_CONFIG['fuel_surcharge'][fuel_type]
+    # Generate coordinates
+    pickup_lats, pickup_lons = generate_coordinates_batch(pickup_areas, nyc_areas)
+    dropoff_lats, dropoff_lons = generate_coordinates_batch(dropoff_areas, nyc_areas)
 
-        # Base fare calculation
-        fare = base_fare + (distances[i] * per_km_rate) + (durations[i] * per_minute_rate) + fuel_surcharge
+    # Generate passenger counts (realistic distribution)
+    passenger_counts = np.random.choice([1, 2, 3, 4, 5, 6], size=batch_size,
+                                        p=[0.6, 0.25, 0.08, 0.04, 0.02, 0.01])
 
-        # Apply surge pricing (time-based)
-        pickup_dt = datetime.strptime(pickup_datetimes[i], "%Y-%m-%d %H:%M:%S UTC")
-        hour = pickup_dt.hour
+    # Generate datetimes (2009-2015 range)
+    pickup_datetimes, dropoff_datetimes, durations = generate_datetimes_batch(batch_size)
 
-        # Friday/Saturday night surge
-        if pickup_dt.weekday() in [4, 5] and 20 <= hour < 24:
-            surge = random.uniform(1.2, 2.0)
-            fare *= surge
+    # Calculate realistic distances
+    distances = calculate_haversine_distances(pickup_lats, pickup_lons, dropoff_lats, dropoff_lons)
 
-        # Rush hour surge
-        elif (7 <= hour < 10) or (16 <= hour < 19):
-            surge = random.uniform(1.1, 1.5)
-            fare *= surge
+    # Calculate fares with dynamic pricing and embedded fraud patterns
+    fare_amounts = calculate_fares_with_embedded_fraud(
+        distances,
+        durations,
+        pickup_datetimes,
+        passenger_counts,
+        weather_df
+    )
 
-        # Apply fraud patterns (embedded in fare calculation)
-        if random.random() < FARE_CONFIG['fraud_params']['fraud_rate']:
-            # Short trip fraud - inflate distance
-            if distances[i] < FARE_CONFIG['fraud_params']['short_trip_threshold']:
-                multiplier = random.uniform(*FARE_CONFIG['fraud_params']['distance_multiplier_range'])
-                fraud_dist = distances[i] * multiplier
-                fare = base_fare + (fraud_dist * per_km_rate) + (durations[i] * per_minute_rate) + fuel_surcharge
+    # Return batch data with only required columns
+    return {
+        'key': keys,
+        'pickup_datetime': pickup_datetimes,
+        'dropoff_datetime': dropoff_datetimes,
+        'pickup_longitude': np.round(pickup_lons, 6),
+        'pickup_latitude': np.round(pickup_lats, 6),
+        'dropoff_longitude': np.round(dropoff_lons, 6),
+        'dropoff_latitude': np.round(dropoff_lats, 6),
+        'passenger_count': passenger_counts,
+        'fare_amount': np.round(fare_amounts, 2)
+    }
 
-            # Long trip fraud - inflate time
-            elif distances[i] > FARE_CONFIG['fraud_params']['long_trip_threshold']:
-                multiplier = random.uniform(*FARE_CONFIG['fraud_params']['time_multiplier_range'])
-                fraud_time = durations[i] * multiplier
-                fare = base_fare + (distances[i] * per_km_rate) + (fraud_time * per_minute_rate) + fuel_surcharge
 
-            # Medium trip fraud - inflate both
-            else:
-                dist_mult = random.uniform(1.05, 1.3)
-                time_mult = random.uniform(1.05, 1.4)
-                fraud_dist = distances[i] * dist_mult
-                fraud_time = durations[i] * time_mult
-                fare = base_fare + (fraud_dist * per_km_rate) + (fraud_time * per_minute_rate) + fuel_surcharge
+def generate_uber_nyc_data(total_rows=2000000, output_filename="uber_nyc_dynamic_fares.csv"):
+    """
+    Generate realistic Uber NYC trip data with dynamic pricing
 
-        # Ensure minimum fare
-        fare_amounts[i] = max(4.0, fare)
+    Parameters:
+    total_rows (int): Number of rows to generate (default: 2,000,000)
+    output_filename (str): Output CSV filename
+    """
 
-    return fare_amounts
+    print(f"Generating {total_rows:,} Uber NYC trip records...")
+
+    # Set random seed for reproducibility
+    np.random.seed(42)
+    random.seed(42)
+
+    # Generate 150+ NYC boroughs and municipalities
+    nyc_areas = generate_nyc_areas()
+    areas = list(nyc_areas.keys())
+
+    # Area distribution weights (most trips in main boroughs)
+    area_weights = calculate_area_weights(areas)
+
+    print(f"Using {len(areas)} boroughs/municipalities with weighted distribution")
+
+    # Generate weather data for entire date range
+    print("Generating weather data...")
+    weather_df = generate_weather_data('2009-01-01', '2015-12-31')
+    print(f"Weather data generated for {len(weather_df)} days")
+
+    # Generate data in batches to manage memory
+    batch_size = 100000  # 100k rows per batch
+    num_batches = total_rows // batch_size
+
+    print(f"Processing in {num_batches} batches of {batch_size:,} rows each...")
+
+    # Initialize CSV file
+    first_batch = True
+
+    for batch_num in range(num_batches):
+        print(f"Processing batch {batch_num + 1}/{num_batches}...")
+
+        # Generate batch data
+        batch_data = generate_batch(batch_size, nyc_areas, areas, area_weights, weather_df)
+
+        # Convert to DataFrame
+        batch_df = pd.DataFrame(batch_data)
+
+        # Save batch to CSV
+        if first_batch:
+            batch_df.to_csv(output_filename, mode='w', index=False)
+            first_batch = False
+        else:
+            batch_df.to_csv(output_filename, mode='a', index=False, header=False)
+
+        print(f"  Saved batch {batch_num + 1}. Total progress: {(batch_num + 1) * batch_size:,}/{total_rows:,} rows")
+
+    # Verify the final file
+    print(f"\nDataset generation complete!")
+    print(f"Output file: {output_filename}")
+
+    # Get file statistics
+    file_size_mb = os.path.getsize(output_filename) / (1024 * 1024)
+    print(f"File size: {file_size_mb:.1f} MB")
+
+    # Show sample data
+    sample_df = pd.read_csv(output_filename, nrows=5)
+    print(f"\nFirst 5 rows of generated dataset:")
+    print(sample_df)
+
+    return output_filename
 
 
 if __name__ == "__main__":
     # Generate the dataset
     output_file = generate_uber_nyc_data(
-        total_rows=2000000,  # 20 lakh rows
-        output_filename="uber_nyc_fraud_analysis.csv"
+        total_rows=2000000,  # 2 million rows
+        output_filename="uber_nyc_dynamic_fares.csv"
     )
 
-    print(f"\n✓ Successfully generated Uber NYC trip records!")
+    print(f"\n✓ Successfully generated Uber NYC trip records with dynamic pricing!")
     print(f"✓ File saved as: {output_file}")
     print(f"✓ Includes 150+ boroughs/municipalities")
-    print(f"✓ Dynamic fare calculation based on distance, duration, and vehicle type")
-    print(f"✓ Embedded fraud patterns for detection analysis")
+    print(f"✓ Dynamic fare calculation based on:")
+    print(f"   - Annual/semi-annual inflation")
+    print(f"   - Weekend/late-night premiums")
+    print(f"   - Weather conditions")
+    print(f"   - Passenger counts")
+    print(f"   - Embedded fraud patterns")
 
     # Final verification
-    print(f"\nDataset verification:")
-    df_sample = pd.read_csv(output_file, nrows=1000)
-    print(f"Coordinate ranges:")
-    print(f"  Longitude: {df_sample['pickup_longitude'].min():.4f} to {df_sample['pickup_longitude'].max():.4f}")
-    print(f"  Latitude: {df_sample['pickup_latitude'].min():.4f} to {df_sample['pickup_latitude'].max():.4f}")
-    print(f"Fare range: ${df_sample['fare_amount'].min():.2f} to ${df_sample['fare_amount'].max():.2f}")
-    print(f"Passenger distribution: {dict(df_sample['passenger_count'].value_counts().sort_index())}")

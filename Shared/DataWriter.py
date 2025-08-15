@@ -16,13 +16,22 @@ class DataWriter:
     :param format: output format ('delta', 'parquet', or 'jdbc')
     """
 
-    def __init__(self, loadtype: str, spark: SparkSession, format: str = "delta",path: Optional[str] = None, table: Optional[str] = None):
+    def __init__(
+            self,
+            loadtype: str,
+            spark: SparkSession,
+            format: str = "delta",
+            path: Optional[str] = None,
+            table: Optional[str] = None,
+            schema: Optional[str] = None
+    ):
         self.loadtype = loadtype
         self.mode = 'overwrite'
         self.path = path
         self.format = format.lower()
         self.spark = spark
         self.table = table
+        self.schema = schema
 
         if self.loadtype == "delta":
             self.mode = "append"
@@ -39,10 +48,11 @@ class DataWriter:
 
         # JDBC write
         if self.format == 'jdbc':
-            print(f"Writing to JDBC table: {self.path}")
+            print(f"Writing to JDBC table: {self.schema}.{self.table}")
+            fulltable = f"{self.schema}.{self.table}" if self.schema else self.table
             df.write.format('jdbc') \
                 .option('url', JDBC_URL) \
-                .option('dbtable', self.table) \
+                .option('dbtable',fulltable) \
                 .option('user', JDBC_PROPERTIES['user']) \
                 .option('password', JDBC_PROPERTIES['password']) \
                 .option('driver', JDBC_PROPERTIES['driver']) \

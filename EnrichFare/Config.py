@@ -1,3 +1,4 @@
+
 config = {
     "fares" : ["uber","tripdetails"],
     "weatherimpact" : ["fares","tripdetails"],
@@ -11,3 +12,4 @@ layer = {
     "timeseries" : "enrich",
     "uberfares": "enrich"
 }
+

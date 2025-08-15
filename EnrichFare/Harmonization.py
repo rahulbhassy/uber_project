@@ -6,8 +6,9 @@ from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
-
-
+from pyspark.sql.types import StructType
+from pyspark.sql.functions import col
+from functools import reduce
 
 class PreHarmonizer:
     def __init__(self,sourcedata: DataFrame,currentdata: DataFrame, loadtype: str):
@@ -292,20 +293,49 @@ class TimeSeriesHarmonizer:
         self.loadtype = 'full'
         self.runtype = runtype
 
+    @staticmethod
+    def _round_avg_columns(df: DataFrame) -> DataFrame:
+        """Rounds all columns containing 'avg' in their name to 2 decimal places."""
+        # Identify columns with 'avg' in their name
+        avg_cols = [col_name for col_name in df.columns if 'avg' in col_name]
+        # Apply rounding only to identified columns
+        if avg_cols:
+            rounding_exprs = [
+                round(col(col_name), 2).alias(col_name)
+                if col_name in avg_cols
+                else col(col_name)
+                for col_name in df.columns
+            ]
+            return df.select(*rounding_exprs)
+        return df
+
     def SaveInterimTables(self,interimtables: dict,spark: SparkSession):
         for table_name, df in interimtables.items():
             jdbcwriter = DataWriter(
                 loadtype=self.loadtype,
                 spark=spark,
                 format='jdbc',
-                table=table_name
+                table=table_name,
+                schema='fares'
             )
             jdbcwriter.WriteData(df=df)
 
     def intermediateTables(self,uberfares: DataFrame , fares: DataFrame):
         intermediate = {}
-        hourly_aggregation = uberfares.groupBy(
-            'pickup_hour'
+        fares = fares.join(
+            uberfares,
+            on='trip_id',
+            how='inner'
+        ).withColumn(
+            'pickup_year',
+            year(to_date(col("date"), "yyyy-MM-dd"))
+        ).withColumn(
+            'pickup_week',
+            weekofyear(to_date(col("date"), "yyyy-MM-dd"))
+        )
+
+        hourly_aggregation = fares.groupBy(
+            'pickup_year','pickup_hour'
         ).agg(
             avg('fare_amount').alias('avg_fare_amount_hour'),
             avg('trip_duration_min').alias('avg_trip_duration_min_hour'),
@@ -314,10 +344,14 @@ class TimeSeriesHarmonizer:
             'pickup_hour',
             when(col('pickup_hour').isNull(), lit('Unknown'))
             .otherwise(col('pickup_hour'))
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
         )
 
         daily_aggregation = fares.groupBy(
-            'pickup_day'
+            'pickup_year','pickup_day'
         ).agg(
             avg('fare_amount').alias('avg_fare_amount_day'),
             avg('trip_duration_min').alias('avg_trip_duration_min_day'),
@@ -326,6 +360,10 @@ class TimeSeriesHarmonizer:
             'pickup_day',
             when(col('pickup_day').isNull(), lit('Unknown'))
             .otherwise(col('pickup_day'))
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
         )
 
         monthly_aggregation = fares.groupBy(
@@ -338,12 +376,16 @@ class TimeSeriesHarmonizer:
             'pickup_month',
             when(col('pickup_month').isNull(), lit('Unknown'))
             .otherwise(col('pickup_month'))
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
         )
 
         peak_hour = fares.filter(
             col('pickup_period').isin('Morning Rush', 'Evening Rush')
         ).groupBy(
-            'pickup_period'
+            'pickup_year','pickup_period'
         ).agg(
             count('trip_id').alias('peak_hour_trip_count'),
             avg('fare_amount').alias('peak_hour_avg_fare_amount'),
@@ -352,25 +394,44 @@ class TimeSeriesHarmonizer:
             'pickup_period',
             when(col('pickup_period').isNull(), lit('Unknown'))
             .otherwise(col('pickup_period'))
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
+        )
+        non_peak_hour = fares.filter(
+            ~col('pickup_period').isin('Morning Rush', 'Evening Rush')
+        ).groupBy(
+            'pickup_year','pickup_period'
+        ).agg(
+            count('trip_id').alias('peak_hour_trip_count'),
+            avg('fare_amount').alias('peak_hour_avg_fare_amount'),
+            avg('trip_duration_min').alias('peak_hour_avg_trip_duration_min')
+        ).withColumn(
+            'pickup_period',
+            when(col('pickup_period').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_period'))
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
         )
 
         weekend_fares = fares.filter(
             col('pickup_day').isin('Saturday', 'Sunday')
         ).groupBy(
-            'pickup_day'
+            'pickup_year','pickup_day'
         ).agg(
             avg('fare_amount').alias('avg_weekend_fare_amount'),
             avg('trip_duration_min').alias('avg_weekend_trip_duration_min'),
             count('trip_id').alias('weekend_trip_count')
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
         )
 
-        fares = fares.withColumn(
-            'pickup_year',
-            year(to_date(col("date_str"), "yyyy-MM-dd"))
-        ).withColumn(
-            'pickup_week',
-            weekofyear(to_date(col("date_str"), "yyyy-MM-dd"))
-        )
+
         yearly_fares = fares.groupBy(
             'pickup_year'
         ).agg(
@@ -393,9 +454,13 @@ class TimeSeriesHarmonizer:
             'pickup_week',
             when(col('pickup_week').isNull(), lit('Unknown'))
             .otherwise(col('pickup_week'))
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
         )
 
-        time_based_price_elasticity = uberfares.withColumn(
+        time_based_price_elasticity = fares.withColumn(
             "avg_fare", avg("fare_amount").over(Window.partitionBy("pickup_hour"))
         ).withColumn(
             "fare_deviation", col("fare_amount") - col("avg_fare")
@@ -410,10 +475,14 @@ class TimeSeriesHarmonizer:
         intermediate['hourly_aggregation'] = hourly_aggregation
         intermediate['weekend_fares'] = weekend_fares
         intermediate['weekly_fares'] = weekly_fares
+        intermediate['non_peak_hour'] = non_peak_hour
+
+        for table in intermediate:
+            intermediate[table] = self._round_avg_columns(intermediate[table])
 
         return intermediate
 
-    def harmonizer(self, spark: SparkSession, dataframes: dict, currentio: Optional[DataLakeIO]) -> DataFrame:
+    def harmonize(self, spark: SparkSession, dataframes: dict, currentio: Optional[DataLakeIO]) -> DataFrame:
         fares = dataframes.get('fares')
         uberfares = dataframes.get('uberfares').select('trip_id','pickup_hour')
         interim_tables = self.intermediateTables(
@@ -424,11 +493,46 @@ class TimeSeriesHarmonizer:
             interimtables=interim_tables,
             spark=spark
         )
-        interim_tables['hourly_aggregation'] = interim_tables['hourly_aggregation'].withColumn("time_period", lit("hourly"))
-        interim_tables['daily_aggregation'] = interim_tables['daily_aggregation'].withColumn("time_period", lit("daily"))
-        interim_tables['monthly_aggregation'] = interim_tables['monthly_aggregation'].withColumn("time_period", lit("monthly"))
-        interim_tables['yearly_fares'] = interim_tables['yearly_fares'].withColumn("time_period", lit("yearly"))
-        interim_tables['weekly_fares'] = interim_tables['weekly_fares'].withColumn("time_period", lit("weekly"))
+        # Directly union all interim tables without schema standardization
+        all_dataframes = list(interim_tables.values())
+
+        # Add a "time_period" column to each DataFrame for identification
+        for i, df in enumerate(all_dataframes):
+            # Identify the time period based on the original key
+            original_key = list(interim_tables.keys())[i]
+            if 'hourly' in original_key:
+                period = 'hourly'
+            elif 'daily' in original_key:
+                period = 'daily'
+            elif 'monthly' in original_key:
+                period = 'monthly'
+            elif 'weekly' in original_key:
+                period = 'weekly'
+            elif 'yearly' in original_key:
+                period = 'yearly'
+            elif 'peak' in original_key:
+                period = 'peak'
+            elif 'non_peak' in original_key:
+                period = 'non_peak'
+            elif 'weekend' in original_key:
+                period = 'weekend'
+            elif 'elasticity' in original_key:
+                period = 'elasticity'
+            else:
+                period = 'unknown'
+
+            all_dataframes[i] = df.withColumn("time_period", lit(period))
+
+        # Union all DataFrames
+        if not all_dataframes:
+            return spark.createDataFrame([], StructType())  # Return empty DataFrame if no data
+
+        timeseries_data = reduce(
+            lambda x, y: x.unionByName(y, allowMissingColumns=True),
+            all_dataframes
+        )
+
+        return timeseries_data
 
 
 
