@@ -4,6 +4,13 @@ from datetime import datetime, timedelta
 import random
 import os
 import math
+from pyspark.sql import SparkSession
+from pyspark.sql.types import StructType, StructField, DateType, DoubleType, IntegerType
+from pyspark.sql.functions import col
+from Shared.FileIO import DataLakeIO
+from Shared.sparkconfig import create_spark_session
+from Shared.DataLoader import DataLoader
+from Shared.pyspark_env import setVEnv
 
 # Enhanced fare configuration with dynamic factors
 FARE_CONFIG = {
@@ -22,46 +29,63 @@ FARE_CONFIG = {
         'ev': 0.05
     },
     'dynamic_factors': {
-        'yearly_increase': 0.03,  # 3% annual fare increase
-        'semiannual_increase': 0.015,  # 1.5% increase every 6 months
-        'weekend_surcharge': 0.15,  # 15% weekend premium
-        'late_night_surcharge': 0.20,  # 20% late night premium
-        'passenger_surcharge': 0.5,  # $0.50 per additional passenger
-        'weather_impact': {
-            'Clear': 1.0,
-            'Rain': 1.15,
-            'Snow': 1.25,
-            'Fog': 1.10,
-            'Storm': 1.30
+        'yearly_increase': 0.03,
+        'semiannual_increase': 0.015,
+        'weekend_surcharge': 0.15,
+        'late_night_surcharge': 0.20,
+        'passenger_surcharge': 0.5,
+        # Weather impact multipliers
+        'rain_impact': {
+            "No Rain": 1.00,
+            "Slight Rain": 1.05,
+            "Medium Rain": 1.10,
+            "Heavy Rain": 1.20
+        },
+        'snow_impact': {
+            "No Snow": 1.00,
+            "Slight Snow": 1.10,
+            "Medium Snow": 1.20,
+            "Heavy Snow": 1.30
+        },
+        'wind_impact': {
+            "Calm": 1.00,
+            "Slight Wind": 1.03,
+            "Windy": 1.07,
+            "Heavy Wind": 1.12
+        },
+        'temp_impact': {
+            "Freezing": 1.15,
+            "Very Cold": 1.10,
+            "Cool": 1.05,
+            "Mild": 1.00,
+            "Warm": 1.03,
+            "Hot": 1.07,
+            "Extreme Heat": 1.12
         }
     },
     'fraud_params': {
-        'fraud_rate': 0.015,  # 1.5% of trips have fraud patterns
+        'fraud_rate': 0.015,
         'distance_multiplier_range': (1.15, 1.8),
         'time_multiplier_range': (1.1, 1.6),
-        'short_trip_threshold': 1.5,  # km
-        'long_trip_threshold': 30,  # km
+        'short_trip_threshold': 1.5,
+        'long_trip_threshold': 30,
         'fraud_short_trip_rate': 0.25,
         'fraud_long_trip_rate': 0.15
     }
 }
 
+# Weather schema as defined
+weather_schema = StructType([
+    StructField("date", DateType(), True),
+    StructField("avg_temp", DoubleType(), True),
+    StructField("precipitation", DoubleType(), True),
+    StructField("weather_code", IntegerType(), True),
+    StructField("avg_humidity", DoubleType(), True),
+    StructField("avg_wind_speed", DoubleType(), True),
+    StructField("avg_cloud_cover", DoubleType(), True),
+    StructField("avg_snow_fall", DoubleType(), True),
+])
 
-# Weather data generation (simulated)
-def generate_weather_data(start_date, end_date):
-    """Generate daily weather conditions for date range"""
-    dates = pd.date_range(start=start_date, end=end_date)
-    conditions = ['Clear', 'Rain', 'Snow', 'Fog', 'Storm']
-    weights = [0.60, 0.20, 0.05, 0.10, 0.05]  # Probability distribution
-
-    weather_data = {
-        'date': dates,
-        'condition': np.random.choice(conditions, size=len(dates), p=weights)
-    }
-
-    weather_df = pd.DataFrame(weather_data)
-    weather_df['date'] = pd.to_datetime(weather_df['date']).dt.date
-    return weather_df.set_index('date')
 
 
 # Time-based fare adjustments
@@ -114,12 +138,80 @@ def get_passenger_surcharge(passenger_count):
     return (passenger_count - 2) * FARE_CONFIG['dynamic_factors']['passenger_surcharge']
 
 
+# Weather category functions
+def get_rain_category(precipitation):
+    """Categorize rain based on precipitation"""
+    if precipitation < 0.1:
+        return "No Rain"
+    elif precipitation < 2:
+        return "Slight Rain"
+    elif precipitation < 10:
+        return "Medium Rain"
+    else:
+        return "Heavy Rain"
+
+
+def get_snow_category(snow_fall):
+    """Categorize snow based on snowfall"""
+    if snow_fall < 0.1:
+        return "No Snow"
+    elif snow_fall < 1:
+        return "Slight Snow"
+    elif snow_fall < 5:
+        return "Medium Snow"
+    else:
+        return "Heavy Snow"
+
+
+def get_wind_category(wind_speed):
+    """Categorize wind based on speed"""
+    if wind_speed < 5:
+        return "Calm"
+    elif wind_speed < 20:
+        return "Slight Wind"
+    elif wind_speed < 40:
+        return "Windy"
+    else:
+        return "Heavy Wind"
+
+
+def get_temp_category(temp_f):
+    """Categorize temperature based on Fahrenheit"""
+    # Convert to Celsius for categorization
+    temp_c = (temp_f - 32) * 5 / 9
+
+    if temp_c <= 0:
+        return "Freezing"
+    elif temp_c <= 5:
+        return "Very Cold"
+    elif temp_c <= 15:
+        return "Cool"
+    elif temp_c <= 25:
+        return "Mild"
+    elif temp_c <= 35:
+        return "Warm"
+    elif temp_c <= 40:
+        return "Hot"
+    else:
+        return "Extreme Heat"
+
+
 # Main fare calculation with enhancements
 def calculate_fares_with_embedded_fraud(distances, durations, pickup_datetimes, passenger_counts, weather_df):
     """Enhanced fare calculation with dynamic factors"""
     base_fare = FARE_CONFIG['base_fare']
     per_minute_rate = FARE_CONFIG['per_minute_rate']
     fare_amounts = np.zeros(len(distances))
+
+    # Convert Spark weather DataFrame to pandas for efficient lookup
+    weather_pd = weather_df.select(
+        col("date").cast("date"),
+        "precipitation",
+        "avg_snow_fall",
+        "avg_wind_speed",
+        "avg_temp"
+    ).toPandas()
+    weather_pd['date'] = pd.to_datetime(weather_pd['date']).dt.date
 
     for i in range(len(distances)):
         # Time-based adjustments
@@ -143,12 +235,35 @@ def calculate_fares_with_embedded_fraud(distances, durations, pickup_datetimes, 
 
         # Weather adjustments
         weather_date = pickup_dt.date()
+        weather_multiplier = 1.0
         try:
-            weather_condition = weather_df.loc[weather_date, 'condition']
-        except KeyError:
-            weather_condition = 'Clear'  # Default to clear if date missing
+            # Get weather data for this date
+            weather_row = weather_pd[weather_pd['date'] == weather_date]
+            if not weather_row.empty:
+                # Extract weather values
+                precipitation = weather_row.iloc[0]['precipitation']
+                snow_fall = weather_row.iloc[0]['avg_snow_fall']
+                wind_speed = weather_row.iloc[0]['avg_wind_speed']
+                temp_f = weather_row.iloc[0]['avg_temp']
 
-        weather_multiplier = FARE_CONFIG['dynamic_factors']['weather_impact'][weather_condition]
+                # Categorize weather conditions
+                rain_cat = get_rain_category(precipitation)
+                snow_cat = get_snow_category(snow_fall)
+                wind_cat = get_wind_category(wind_speed)
+                temp_cat = get_temp_category(temp_f)
+
+                # Get weather multipliers
+                rain_mult = FARE_CONFIG['dynamic_factors']['rain_impact'][rain_cat]
+                snow_mult = FARE_CONFIG['dynamic_factors']['snow_impact'][snow_cat]
+                wind_mult = FARE_CONFIG['dynamic_factors']['wind_impact'][wind_cat]
+                temp_mult = FARE_CONFIG['dynamic_factors']['temp_impact'][temp_cat]
+
+                # Combine weather multipliers
+                weather_multiplier = rain_mult * snow_mult * wind_mult * temp_mult
+
+        except (KeyError, IndexError):
+            # Fallback if weather data is missing
+            weather_multiplier = 1.0
 
         # Apply multipliers
         fare *= time_multiplier * weather_multiplier
@@ -399,11 +514,12 @@ def generate_batch(batch_size, nyc_areas, areas, area_weights, weather_df):
     }
 
 
-def generate_uber_nyc_data(total_rows=2000000, output_filename="uber_nyc_dynamic_fares.csv"):
+def generate_uber_nyc_data(weather_spark_df, total_rows=2000000, output_filename="uber_nyc_dynamic_fares.csv"):
     """
-    Generate realistic Uber NYC trip data with dynamic pricing
+    Generate realistic Uber NYC trip data with dynamic pricing using existing weather data
 
     Parameters:
+    weather_spark_df (DataFrame): Spark DataFrame containing weather data
     total_rows (int): Number of rows to generate (default: 2,000,000)
     output_filename (str): Output CSV filename
     """
@@ -422,11 +538,7 @@ def generate_uber_nyc_data(total_rows=2000000, output_filename="uber_nyc_dynamic
     area_weights = calculate_area_weights(areas)
 
     print(f"Using {len(areas)} boroughs/municipalities with weighted distribution")
-
-    # Generate weather data for entire date range
-    print("Generating weather data...")
-    weather_df = generate_weather_data('2009-01-01', '2015-12-31')
-    print(f"Weather data generated for {len(weather_df)} days")
+    print(f"Using provided weather data with {weather_spark_df.count()} records")
 
     # Generate data in batches to manage memory
     batch_size = 100000  # 100k rows per batch
@@ -441,7 +553,7 @@ def generate_uber_nyc_data(total_rows=2000000, output_filename="uber_nyc_dynamic
         print(f"Processing batch {batch_num + 1}/{num_batches}...")
 
         # Generate batch data
-        batch_data = generate_batch(batch_size, nyc_areas, areas, area_weights, weather_df)
+        batch_data = generate_batch(batch_size, nyc_areas, areas, area_weights, weather_spark_df)
 
         # Convert to DataFrame
         batch_df = pd.DataFrame(batch_data)
@@ -472,9 +584,28 @@ def generate_uber_nyc_data(total_rows=2000000, output_filename="uber_nyc_dynamic
 
 
 if __name__ == "__main__":
-    # Generate the dataset
+    # Example usage - replace with your actual weather data loading
+    # weather_spark_df = spark.read.schema(weather_schema).parquet("path/to/your/weather/data")
+
+    setVEnv()
+    spark = create_spark_session()
+    currentio = DataLakeIO(
+        process='read',
+        table='weatherdetails',
+        state='current',
+        layer='raw',
+        loadtype='full',
+    )
+    reader = DataLoader(
+        path=currentio.filepath(),
+        filetype=currentio.file_ext(),
+        loadtype='full'
+    )
+    weather_spark_df = reader.LoadData(spark=spark)
+    # Generate the dataset using existing weather data
     output_file = generate_uber_nyc_data(
-        total_rows=2000000,  # 2 million rows
+        weather_spark_df=weather_spark_df,
+        total_rows=5000000,  # 2 million rows
         output_filename="uber_nyc_dynamic_fares.csv"
     )
 
@@ -484,8 +615,7 @@ if __name__ == "__main__":
     print(f"✓ Dynamic fare calculation based on:")
     print(f"   - Annual/semi-annual inflation")
     print(f"   - Weekend/late-night premiums")
-    print(f"   - Weather conditions")
+    print(f"   - Detailed weather factors (rain, snow, wind, temperature)")
     print(f"   - Passenger counts")
     print(f"   - Embedded fraud patterns")
 
-    # Final verification

@@ -5,6 +5,7 @@ from Shared.pyspark_env import setVEnv
 from DGFunctions import DataSaver
 import random
 from faker import Faker
+from datetime import date, timedelta
 
 def generate_one_vehicle_per_driver(driver_ids):
     fake = Faker()
@@ -29,7 +30,7 @@ def generate_one_vehicle_per_driver(driver_ids):
 
     for driver_id in driver_ids:
         model = random.choice(vehicle_models)
-        year = random.randint(2015, 2024)
+        year = random.randint(2009, 2010)
 
         # Fuel logic
         if 'Tesla' in model:
@@ -50,8 +51,14 @@ def generate_one_vehicle_per_driver(driver_ids):
             'fuel_type': fuel_type,
             'seating_capacity': random.choice([4, 5, 6, 7, 8]),
             'mileage': random.randint(15000, 200000),
-            'insurance_expiry': fake.date_between(start_date='today', end_date='+2y'),
-            'last_maintenance': fake.date_between(start_date='-6m', end_date='today'),
+            'insurance_expiry': fake.date_between(
+                start_date=date(2012, 1, 1),
+                end_date=date(2017,12,31)
+            ).strftime('%Y-%m-%d'),
+            'last_maintenance': fake.date_between(
+                start_date=date(2009, 1, 1),
+                end_date=date(2015, 12, 31)
+            ).strftime('%Y-%m-%d'),
             'status': random.choice(vehicle_statuses),
             'registration_state': fake.state_abbr()
         })

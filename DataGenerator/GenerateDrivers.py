@@ -51,7 +51,7 @@ def generate_historical_drivers(num_drivers=500):
 def main():
     print("Starting historical driver generation...")
 
-    NUM_DRIVERS = 250
+    NUM_DRIVERS = 350
     OUTPUT_FILENAME = "driverdetails.csv"
 
     # Generate drivers

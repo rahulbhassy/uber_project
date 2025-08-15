@@ -431,6 +431,20 @@ class TimeSeriesHarmonizer:
             .otherwise(col('pickup_year'))
         )
 
+        weekday_fares = fares.filter(
+            ~col('pickup_day').isin('Saturday', 'Sunday')
+        ).groupBy(
+            'pickup_year','pickup_day'
+        ).agg(
+            avg('fare_amount').alias('avg_weekday_fare_amount'),
+            avg('trip_duration_min').alias('avg_weekday_trip_duration_min'),
+            count('trip_id').alias('weekday_trip_count')
+        ).withColumn(
+            'pickup_year',
+            when(col('pickup_year').isNull(), lit('Unknown'))
+            .otherwise(col('pickup_year'))
+        )
+
 
         yearly_fares = fares.groupBy(
             'pickup_year'
@@ -460,14 +474,7 @@ class TimeSeriesHarmonizer:
             .otherwise(col('pickup_year'))
         )
 
-        time_based_price_elasticity = fares.withColumn(
-            "avg_fare", avg("fare_amount").over(Window.partitionBy("pickup_hour"))
-        ).withColumn(
-            "fare_deviation", col("fare_amount") - col("avg_fare")
-        ).groupBy("pickup_hour").agg(
-            avg("fare_deviation").alias("avg_fare_deviation")
-        )
-        intermediate['time_based_price_elasticity'] = time_based_price_elasticity
+        intermediate['weekday_fares'] = weekday_fares
         intermediate['yearly_fares'] = yearly_fares
         intermediate['peak_hour'] = peak_hour
         intermediate['monthly_aggregation'] = monthly_aggregation
@@ -516,8 +523,8 @@ class TimeSeriesHarmonizer:
                 period = 'non_peak'
             elif 'weekend' in original_key:
                 period = 'weekend'
-            elif 'elasticity' in original_key:
-                period = 'elasticity'
+            elif 'weekday' in original_key:
+                period = 'weekday'
             else:
                 period = 'unknown'
 

@@ -25,6 +25,16 @@ def enrich_weatherimpact_table_task(table: str, loadtype: str, runtype: str = 'p
         runtype=runtype
     )
 
+@task(name="Enrich_TimeSeries_TableRefresh", tags=["enrich", "timeseries","refresh"])
+def enrich_timeseries_table_task(table: str, loadtype: str, runtype: str = 'prod'):
+    """Task to refresh TimeSeries table"""
+    logger = get_run_logger()
+    logger.info("Refreshing TimeSeries table")
+    Process_FareTablesRefresh.main(
+        table=table,
+        loadtype=loadtype,
+        runtype=runtype
+    )
 
 @flow(
     name="Enrich_Uber_GRP2_Processing_Pipeline",
@@ -49,9 +59,16 @@ def enrich_grp2_processing_flow(load_type: str, runtype: str = 'prod'):
         runtype=runtype,
         wait_for=[enrich_fare_tables_task]
     )
+
+    enrich_timeseries_table_task(
+        table="timeseries",
+        loadtype=load_type,
+        runtype=runtype,
+        wait_for=[enrich_fare_tables_task]
+    )
 if __name__ == "__main__":
     # Example execution
     enrich_grp2_processing_flow(
-        load_type="delta",
+        load_type="full",
         runtype="prod"
     )
