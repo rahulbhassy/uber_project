@@ -1,3 +1,4 @@
+from distributed.utils import wait_for
 from prefect import flow, task
 from prefect_dask.task_runners import DaskTaskRunner
 from prefect import get_run_logger
@@ -43,7 +44,12 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
     powerbirefresh_flow(
         configname=['all'],
         loadtype=load_type,
-        runtype=runtype
+        runtype=runtype,
+        wait_for=[
+            raw_processing_flow,
+            enrich_grp1_processing_flow,
+            enrich_grp2_processing_flow
+        ]
     )
 
 

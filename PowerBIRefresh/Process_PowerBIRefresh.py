@@ -7,7 +7,7 @@ from PowerBIRefresh.Utilities import refreshtables,layer,schema
 setVEnv()
 loadtype = 'full'
 runtype = 'prod'
-configname = ['all']
+configname = ['weatherimpact']
 spark = create_spark_session_jdbc()
 tables = refreshtables if configname[0] == 'all' else configname
 tableassignments = SourceObjectAssignment(
