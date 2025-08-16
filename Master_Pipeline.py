@@ -43,7 +43,7 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
     logger.info("Starting PowerBI Refresh")
     powerbirefresh_flow(
         configname=['all'],
-        loadtype=load_type,
+        loadtype='full',
         runtype=runtype,
         wait_for=[
             raw_processing_flow,
