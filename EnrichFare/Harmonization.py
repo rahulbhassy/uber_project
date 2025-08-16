@@ -339,6 +339,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             avg('fare_amount').alias('avg_fare_amount_hour'),
             avg('trip_duration_min').alias('avg_trip_duration_min_hour'),
+            avg('fare_per_km').alias('avg_fare_per_km_hour'),
+            avg('fare_per_min').alias('avg_fare_per_min_hour'),
             count('trip_id').alias('trip_count_hour')
         ).withColumn(
             'pickup_hour',
@@ -355,6 +357,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             avg('fare_amount').alias('avg_fare_amount_day'),
             avg('trip_duration_min').alias('avg_trip_duration_min_day'),
+            avg('fare_per_km').alias('avg_fare_per_km_day'),
+            avg('fare_per_min').alias('avg_fare_per_min_day'),
             count('trip_id').alias('trip_count_day')
         ).withColumn(
             'pickup_day',
@@ -371,6 +375,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             avg('fare_amount').alias('avg_fare_amount_month'),
             avg('trip_duration_min').alias('avg_trip_duration_min_month'),
+            avg('fare_per_km').alias('avg_fare_per_km_month'),
+            avg('fare_per_min').alias('avg_fare_per_min_month'),
             count('trip_id').alias('trip_count_month')
         ).withColumn(
             'pickup_month',
@@ -389,6 +395,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             count('trip_id').alias('peak_hour_trip_count'),
             avg('fare_amount').alias('peak_hour_avg_fare_amount'),
+            avg('fare_per_km').alias('avg_fare_per_km_peak_hour'),
+            avg('fare_per_min').alias('avg_fare_per_peak_hour'),
             avg('trip_duration_min').alias('peak_hour_avg_trip_duration_min')
         ).withColumn(
             'pickup_period',
@@ -399,6 +407,7 @@ class TimeSeriesHarmonizer:
             when(col('pickup_year').isNull(), lit('Unknown'))
             .otherwise(col('pickup_year'))
         )
+
         non_peak_hour = fares.filter(
             ~col('pickup_period').isin('Morning Rush', 'Evening Rush')
         ).groupBy(
@@ -406,6 +415,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             count('trip_id').alias('non_peak_hour_trip_count'),
             avg('fare_amount').alias('non_peak_hour_avg_fare_amount'),
+            avg('fare_per_km').alias('avg_fare_per_km_non_peak_hour'),
+            avg('fare_per_min').alias('avg_fare_per_min_non_peak_hour'),
             avg('trip_duration_min').alias('non_peak_hour_avg_trip_duration_min')
         ).withColumn(
             'pickup_period',
@@ -424,6 +435,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             avg('fare_amount').alias('avg_weekend_fare_amount'),
             avg('trip_duration_min').alias('avg_weekend_trip_duration_min'),
+            avg('fare_per_km').alias('avg_fare_per_km_weekend'),
+            avg('fare_per_min').alias('avg_fare_per_min_hour_weekend'),
             count('trip_id').alias('weekend_trip_count')
         ).withColumn(
             'pickup_year',
@@ -438,6 +451,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             avg('fare_amount').alias('avg_weekday_fare_amount'),
             avg('trip_duration_min').alias('avg_weekday_trip_duration_min'),
+            avg('fare_per_km').alias('avg_fare_per_km_weekday'),
+            avg('fare_per_min').alias('avg_fare_per_min_weekday'),
             count('trip_id').alias('weekday_trip_count')
         ).withColumn(
             'pickup_year',
@@ -451,6 +466,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             avg('fare_amount').alias('avg_fare_amount_year'),
             avg('trip_duration_min').alias('avg_trip_duration_min_year'),
+            avg('fare_per_km').alias('avg_fare_per_km_year'),
+            avg('fare_per_min').alias('avg_fare_per_min_year'),
             count('trip_id').alias('trip_count_year')
         ).withColumn(
             'pickup_year',
@@ -463,6 +480,8 @@ class TimeSeriesHarmonizer:
         ).agg(
             avg('fare_amount').alias('avg_fare_amount_week'),
             avg('trip_duration_min').alias('avg_trip_duration_min_week'),
+            avg('fare_per_km').alias('avg_fare_per_km_weekly'),
+            avg('fare_per_min').alias('avg_fare_per_min_weekly'),
             count('trip_id').alias('trip_count_week')
         ).withColumn(
             'pickup_week',

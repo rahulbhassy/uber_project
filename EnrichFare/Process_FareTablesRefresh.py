@@ -1,16 +1,15 @@
 from Shared.pyspark_env import setVEnv
-from Shared.sparkconfig import create_spark_session
+from Shared.sparkconfig import create_spark_session , create_spark_session_jdbc
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO , SourceObjectAssignment
 from EnrichFare.Harmonization import Harmonizer
 from EnrichFare.Config import config, layer
 
 setVEnv()
-spark = create_spark_session()
 table = 'timeseries'
 loadtype = 'full'
 runtype = 'prod'
-
+spark = create_spark_session_jdbc() if table == 'timeseries' else create_spark_session()
 sourcetables = config[table]
 sourceobjectassignments = SourceObjectAssignment(
     sourcetables=sourcetables,
