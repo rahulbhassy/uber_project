@@ -59,8 +59,8 @@ def create_spark_session_sedona():
         .master("local[4]") \
         .config("spark.driver.memory", "6g") \
         .config("spark.executor.memory", "4g") \
-        .config("spark.memory.fraction", "0.7") \
-        .config("spark.memory.storageFraction", "0.2") \
+        .config("spark.memory.fraction", "0.6") \
+        .config("spark.memory.storageFraction", "0.4") \
         .config("spark.sql.shuffle.partitions", "8") \
         .config("spark.executor.extraJavaOptions", "-XX:+UseG1GC") \
         .config("spark.jars",

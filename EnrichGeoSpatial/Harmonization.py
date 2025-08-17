@@ -1,7 +1,7 @@
 from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
-from pyspark.sql.functions import expr, col, lit , round
+from pyspark.sql.functions import expr, col, lit , round , broadcast
 
 _KEY_COLUMN = "trip_id"
 
@@ -93,12 +93,12 @@ class Harmonizer:
         enriched_uber = (
             self.sourcedata.alias("u")
             .join(
-                self.boroughs_df.alias("p"),
+                broadcast(self.boroughs_df.alias("p")),
                 self.pickup_condition,
                 "left"
             )
             .join(
-                self.boroughs_df.alias("d"),
+                broadcast(self.boroughs_df.alias("d")),
                 self.dropoff_condition,
                 "left"
             )

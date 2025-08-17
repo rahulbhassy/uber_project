@@ -60,7 +60,7 @@ boroughs_df = featuresdata.withColumn(
     "geom",
     expr("ST_GeomFromGeoJSON(geometry_json)")
 ).select("borough", "geom")
-boroughs_df.cache()
+boroughs_df = boroughs_df.cache()
 
 
 tripio = DataLakeIO(
