@@ -37,6 +37,9 @@ class DataLakeIO:
             'uber': ['Enrich', 'Enriched', 'spatial'],
             'uberfares|enrichweather': ['Enrich', 'Enriched_Weather_uberData'],
             '__default__': ['Enrich', 'Enriched']
+        },
+        'system': {
+            '__default__': ['System','BalancingResults']
         }
     }
 
@@ -116,7 +119,7 @@ class DataLakeIO:
 
 class IntermediateIO:
     _TABLES = frozenset([
-        "uberfares", "tripdetails", "driverdetails", "weatherimpact",
+        "uberfares", "tripdetails", "driverdetails", "weatherimpact", "balancingresults" , "BalancingResults"
         "customerdetails", "vehicledetails", "uber","features", "weatherdetails" , "fares" , "timeseries"
     ])
 
@@ -350,17 +353,17 @@ class SparkTableViewer:
         app.run(host=host, port=port, debug=debug)
 
 class SourceObjectAssignment:
-    def __init__(self,loadtype: str, sourcetables: List[str],runtype: str = 'full'):
+    def __init__(self,loadtype: str, sourcetables: List[str],runtype: str = 'prod'):
         self.loadtype = loadtype
         self.runtype = runtype
         self.sourcetables = sourcetables
 
-    def assign_DataLakeIO(self,layer: dict):
+    def assign_DataLakeIO(self,layer: dict,process: Optional[str] = 'read'):
         """Assigns DataLakeIO objects to each source table based on the load type and runtime type"""
         io_map = {}
         for table in self.sourcetables:
             io_map[table] = DataLakeIO(
-                process='read',
+                process=process,
                 table=table,
                 loadtype=self.loadtype,
                 state='current',

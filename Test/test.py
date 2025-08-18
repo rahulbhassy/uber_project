@@ -10,46 +10,27 @@ from Shared.DataWriter import DataWriter
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import SparkTableViewer
 from pyspark.sql.functions import avg, col, lit , round
-
+from Balancing.config import SCHEMA
 
 setVEnv()
 table = 'fares'
 spark = create_spark_session()
 loadtype = 'full'
 
-fileio = DataLakeIO(
-    process="read",
-    table=table,
+balancingio = DataLakeIO(
+    process='write',
+    table='balancingresults',
     state='current',
-    loadtype=loadtype,
-    layer='enrich'
-)
-reader = DataLoader(
-    path=fileio.filepath(),
-    filetype=fileio.file_ext(),
+    layer='system',
     loadtype=loadtype
 )
 
-fares = reader.LoadData(spark=spark)
-full = fares.filter(
-    (fares.pickupboroughsource == 'features') &
-    (fares.dropoffboroughsource == 'features')
+reader = DataLoader(
+    loadtype=loadtype,
+    path=balancingio.filepath(),
+    filetype='delta'
+
 )
-half1 = fares.filter(
-    (fares.pickupboroughsource == 'features') &
-    (fares.dropoffboroughsource != 'features')
-)
-half2 = fares.filter(
-    (fares.pickupboroughsource != 'features') &
-    (fares.dropoffboroughsource == 'features')
-)
-empty = fares.filter(
-    (fares.pickupboroughsource != 'features') &
-    (fares.dropoffboroughsource != 'features')
-)
-print(f"pickup is features {half1.count()}")
-print(f"dropoff is features {half2.count()}")
-print(f"both are features {full.count()}")
-print(f"neither are features {empty.count()}")
-viewer = SparkTableViewer(df=fares)
+df = reader.LoadData(spark)
+viewer = SparkTableViewer(df=df)
 viewer.display()
