@@ -69,6 +69,6 @@ def enrich_grp2_processing_flow(load_type: str, runtype: str = 'prod'):
 if __name__ == "__main__":
     # Example execution
     enrich_grp2_processing_flow(
-        load_type="full",
+        load_type="delta",
         runtype="prod"
     )

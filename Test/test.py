@@ -31,6 +31,25 @@ reader = DataLoader(
 )
 
 fares = reader.LoadData(spark=spark)
-
+full = fares.filter(
+    (fares.pickupboroughsource == 'features') &
+    (fares.dropoffboroughsource == 'features')
+)
+half1 = fares.filter(
+    (fares.pickupboroughsource == 'features') &
+    (fares.dropoffboroughsource != 'features')
+)
+half2 = fares.filter(
+    (fares.pickupboroughsource != 'features') &
+    (fares.dropoffboroughsource == 'features')
+)
+empty = fares.filter(
+    (fares.pickupboroughsource != 'features') &
+    (fares.dropoffboroughsource != 'features')
+)
+print(f"pickup is features {half1.count()}")
+print(f"dropoff is features {half2.count()}")
+print(f"both are features {full.count()}")
+print(f"neither are features {empty.count()}")
 viewer = SparkTableViewer(df=fares)
 viewer.display()
