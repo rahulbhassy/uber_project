@@ -1,5 +1,5 @@
 JDBC_URL = (
-    "jdbc:sqlserver://192.168.68.102:1433;"
+    "jdbc:sqlserver://192.168.68.105:1433;"
     "databaseName=UberAnalysis;"
     "encrypt=true;"
     "trustServerCertificate=true;"
