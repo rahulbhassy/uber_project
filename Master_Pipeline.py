@@ -39,7 +39,7 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
         runtype=runtype,
         wait_for=[raw_processing_flow,enrich_grp1_processing_flow]
     )
-    '''
+
     logger.info("Starting PowerBI Refresh")
     powerbirefresh_flow(
         configname=['all'],
@@ -51,7 +51,6 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
             enrich_grp2_processing_flow
         ]
     )
-    '''
 
 
 if __name__ == "__main__":

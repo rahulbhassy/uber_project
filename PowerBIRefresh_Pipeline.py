@@ -32,7 +32,7 @@ def powerbirefresh_flow(configname: List[str],loadtype: str, runtype: str = 'pro
 
 
 if __name__ == "__main__":
-    # Example execution
+
     powerbirefresh_flow(
         configname=['all'],
         loadtype="full",
