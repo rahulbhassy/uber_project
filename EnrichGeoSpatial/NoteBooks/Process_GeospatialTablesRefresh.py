@@ -12,9 +12,10 @@ import sys
 import datetime
 
 def main(uber:str,borough: str,trip:str,loadtype: str, runtype: str = 'prod'):
+    logging = Logger(notebook_name='Process_Weather_Uber')
+    logger = logging.setup_logger()
     try:
-        logging = Logger(notebook_name='Process_Weather_Uber')
-        logger = logging.setup_logger()
+
         # Log critical environment information
         logger.info(f"Starting UberFares Data Processing")
         logger.info(f"Parameters:, sourceobject={uber}, sourceobject={borough} , {trip}, loadtype={loadtype}")
@@ -74,7 +75,6 @@ def main(uber:str,borough: str,trip:str,loadtype: str, runtype: str = 'prod'):
             "geom",
             expr("ST_GeomFromGeoJSON(geometry_json)")
         ).select("borough", "geom")
-        boroughs_df.cache()
 
 
         tripio = DataLakeIO(

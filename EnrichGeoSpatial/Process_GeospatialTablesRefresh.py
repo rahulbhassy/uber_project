@@ -13,7 +13,7 @@ SedonaContext.create(spark)
 sourceobjectuber = 'uberfares'
 sourceobjectborough = 'features'
 sourceobjecttrip = 'tripdetails'
-loadtype = 'full'
+loadtype = 'delta'
 
 readuberio = DataLakeIO(
     process='read',
@@ -60,8 +60,6 @@ boroughs_df = featuresdata.withColumn(
     "geom",
     expr("ST_GeomFromGeoJSON(geometry_json)")
 ).select("borough", "geom")
-boroughs_df = boroughs_df.cache()
-
 
 tripio = DataLakeIO(
     process='read',
