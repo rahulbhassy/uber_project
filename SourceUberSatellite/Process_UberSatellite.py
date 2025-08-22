@@ -9,8 +9,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 setEnv()
 spark = create_spark_session()
-satellite_tables = ["vehicledetails"]
-loadtype = 'full'
+satellite_tables = ["customerdetails"]
+loadtype = 'delta'
 
 def process_table(sourceobject: str):
     """Load, clean and write one satellite table."""

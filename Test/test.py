@@ -32,5 +32,8 @@ reader = DataLoader(
 
 )
 df = reader.LoadData(spark)
+df = df.filter(
+    df.date.like('2025-08-22%')
+)
 viewer = SparkTableViewer(df=df)
 viewer.display()

@@ -61,8 +61,6 @@ def create_spark_session_sedona():
         .config("spark.executor.memory", "4g") \
         .config("spark.memory.fraction", "0.6") \
         .config("spark.memory.storageFraction", "0.4") \
-        .config("spark.sql.shuffle.partitions", "8") \
-        .config("spark.executor.extraJavaOptions", "-XX:+UseG1GC") \
         .config("spark.jars",
                 "file:///C:/Spark/spark-3.4.4-bin-hadoop3/jars/delta-core_2.12-2.4.0.jar,"
                 "file:///C:/Users/HP/uber_project/config/mysql-connector-j-8.0.33.jar,"
