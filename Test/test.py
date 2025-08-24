@@ -32,5 +32,5 @@ reader = DataLoader(
 
 )
 df = reader.LoadData(spark)
-viewer = SparkTableViewer(df=df)
-viewer.display()
+col_list = df.columns
+print(col_list)

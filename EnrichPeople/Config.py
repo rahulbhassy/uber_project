@@ -1,5 +1,6 @@
 config = {
     "customerprofile" : ["customerdetails","fares","tripdetails"],
+    "customerpreference" : ["customerprofile","fares","tripdetails","uberfares"],
     "driverprofile" : ["driverdetails","fares","tripdetails"]
 }
 layer = {
@@ -8,12 +9,15 @@ layer = {
     "fares" : "enrich",
     "tripdetails" : "raw",
     "customerprofile" : "enrich",
-    "driverprofile" : "enrich"
+    "driverprofile" : "enrich",
+    "customerpreference" : "enrich",
+    "uberfares" : "raw"
 }
 
 keys = {
     "customerprofile" : ["customer_id"],
-    "driverprofile" : ["driver_id"]
+    "driverprofile" : ["driver_id"],
+    "customerpreference" : ["customer_id"]
 }
 
 updateitems = {
@@ -39,6 +43,6 @@ updateitems = {
     "total_debit_card_amount",
     "total_digital_wallet_amount",
     "age"
-]
+    ]
 
 }

@@ -122,7 +122,7 @@ class IntermediateIO:
     _TABLES = frozenset([
         "uberfares", "tripdetails", "driverdetails", "weatherimpact", "balancingresults" , "BalancingResults",
         "customerdetails", "vehicledetails", "uber","features", "weatherdetails" , "fares" , "timeseries",
-        "customerprofile","driverprofile"
+        "customerprofile","driverprofile","customerpreference"
     ])
 
     def __init__(self, fullpath: str, date: str = None):
@@ -211,7 +211,7 @@ class GeoJsonIO:
         return output_filename
 
 class MergeIO:
-    def __init__(self,table: str, currentio: DataLakeIO,updateitems: List[str],key_columns: List[str]):
+    def __init__(self,table: str, currentio: DataLakeIO,key_columns: List[str],updateitems: Optional[List[str]] =None):
         self.table = table
         self.currentio = currentio
         self.updateitems = updateitems
@@ -227,7 +227,11 @@ class MergeIO:
         print(f"Starting merge operation for table: {self.table}")
         deltaTable = DeltaTable.forPath(spark, self.currentio.filepath())
 
-        update_expr = {col: f"s.{col}" for col in self.updateitems}
+        update_expr = {}
+        if self.updateitems is None:
+            update_expr = {col: f"s.{col}" for col in updated_df.columns}
+        else:
+            update_expr = {col: f"s.{col}" for col in self.updateitems}
 
         # Build insert dict dynamically (insert all columns from source DF)
         insert_expr = {col: f"s.{col}" for col in updated_df.columns}
