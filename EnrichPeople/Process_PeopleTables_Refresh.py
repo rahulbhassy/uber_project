@@ -1,14 +1,16 @@
 from EnrichPeople.Config import config,layer , keys, updateitems
 from Shared.sparkconfig import create_spark_session_large
 from Shared.FileIO import SourceObjectAssignment , DataLakeIO , MergeIO
+from Shared.DataWriter import DataWriter
 from EnrichPeople.Harmonization import Harmonizer
 from Shared.pyspark_env import setVEnv
-from Shared.FileIO import SparkTableViewer
+
 
 setVEnv()
 table = "customerprofile"
 loadtype = 'full'
 runtype = 'prod'
+initial_load = 'yes'
 
 spark = create_spark_session_large()
 sourcetables = config[table]
@@ -43,12 +45,21 @@ destination_data = harmonizer.harmonize(
     dataframes=dataframes,
     currentio=currentio
 )
-mergeconfig = MergeIO(
-    table=table,
-    currentio= currentio,
-    updateitems=updateitems.get(table),
-    key_columns= keys.get(table)
-)
-mergeconfig.merge(spark=spark,updated_df=destination_data)
+if initial_load == 'yes':
+    datawriter = DataWriter(
+        loadtype=loadtype,
+        path=currentio.filepath(),
+        spark=spark,
+        format='delta'
+    )
+    datawriter.WriteData(df=destination_data)
+else:
+    mergeconfig = MergeIO(
+        table=table,
+        currentio= currentio,
+        updateitems=updateitems.get(table),
+        key_columns= keys.get(table)
+    )
+    mergeconfig.merge(spark=spark,updated_df=destination_data)
 
 spark.stop()
