@@ -1,5 +1,5 @@
 from Shared.sparkconfig import create_spark_session
-from Shared.pyspark_env import setEnv
+from Shared.pyspark_env import setEnv , stop_spark
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
@@ -84,7 +84,7 @@ def main(uber: str, weather: str, loadtype: str = 'delta', runtype: str = 'prod'
         )
         datawriter.WriteData(df=enriched_weather_data)
         logger.info("Data enriched and written successfully...")
-        spark.stop()
+        stop_spark(spark=spark)
         logger.info(f"Processing completed at {datetime.datetime.now()}")
         return 0
 

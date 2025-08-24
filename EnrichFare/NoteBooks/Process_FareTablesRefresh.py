@@ -1,4 +1,4 @@
-from Shared.pyspark_env import setVEnv
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.sparkconfig import create_spark_session , create_spark_session_jdbc
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO , SourceObjectAssignment
@@ -63,7 +63,7 @@ def main(table: str, loadtype: str, runtype: str ='dev'):
             spark=spark
         )
         datawriter.WriteData(df=destination_data)
-        spark.stop()
+        stop_spark(spark=spark)
         logger.info(f"Processing completed at {datetime.datetime.now()}")
         return 0
 

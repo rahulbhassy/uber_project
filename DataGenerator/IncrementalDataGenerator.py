@@ -7,7 +7,7 @@ from pyspark.sql import DataFrame
 import argparse
 import sys
 import datetime
-
+from Shared.pyspark_env import setVEnv, stop_spark
 # Import all required classes from the previous code
 from DataGenerator.DGFunctions import (
     GetData, DataGenerator, Combiner, TripGenerator, DataSaver
@@ -98,6 +98,7 @@ def main(runtype: str = 'prod'):
     data_saver.generate_summary_report()
 
     print("\nData generation completed successfully!")
+    stop_spark()
 
 
 if __name__ == "__main__":

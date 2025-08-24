@@ -1,5 +1,5 @@
 from Shared.sparkconfig import create_spark_session
-from Shared.pyspark_env import setVEnv
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.DataLoader import DataLoader
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
@@ -65,7 +65,7 @@ def main(table: str,loadtype: str, runtype: str = 'prod'):
         )
         datawriter.WriteData(df=enriched_data)
 
-        spark.stop()
+        stop_spark(spark=spark)
         logger.info(f"Processing completed at {datetime.datetime.now()}")
         return 0
 

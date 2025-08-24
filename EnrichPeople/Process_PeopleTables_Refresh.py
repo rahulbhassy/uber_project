@@ -3,7 +3,7 @@ from Shared.sparkconfig import create_spark_session_large
 from Shared.FileIO import SourceObjectAssignment , DataLakeIO , MergeIO
 from Shared.DataWriter import DataWriter
 from EnrichPeople.Harmonization import Harmonizer
-from Shared.pyspark_env import setVEnv
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.FileIO import SparkTableViewer
 
 
@@ -65,4 +65,4 @@ else:
     )
     mergeconfig.merge(spark=spark,updated_df=destination_data)
 
-spark.stop()
+stop_spark(spark=spark)

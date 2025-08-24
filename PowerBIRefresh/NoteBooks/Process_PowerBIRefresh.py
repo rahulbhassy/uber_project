@@ -1,5 +1,5 @@
 from typing import List
-from Shared.pyspark_env import setVEnv
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.sparkconfig import create_spark_session_jdbc
 from Shared.FileIO import SourceObjectAssignment
 from Shared.DataWriter import DataWriter
@@ -46,7 +46,7 @@ def main(configname: List[str],loadtype: str, runtype: str = 'prod'):
             )
             jdbcwriter.WriteData(df=df)
 
-        spark.stop()
+        stop_spark(spark=spark)
         logger.info(f"PowerBI Refresh Completed at {datetime.datetime.now()}")
         return 0
 

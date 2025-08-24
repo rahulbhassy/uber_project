@@ -1,4 +1,4 @@
-from Shared.pyspark_env import setVEnv
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.sparkconfig import create_spark_session
 from Shared.FileIO import SourceObjectAssignment
 from Shared.FileIO import DataLakeIO
@@ -63,6 +63,6 @@ writer = DataWriter(
     spark=spark
 )
 writer.WriteData(df=final)
-spark.stop()
+stop_spark(spark=spark)
 
 
