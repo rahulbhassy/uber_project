@@ -12,6 +12,7 @@ runtype = 'prod'
 loadtype = 'full'
 
 final = spark.createDataFrame([], SCHEMA)
+results = []
 for table_name, info in CHECKS.items():
     sourcetable_assignment = SourceObjectAssignment(
         sourcetables=info['tables'],
@@ -44,8 +45,9 @@ for table_name, info in CHECKS.items():
         targetquery=targetquery,
     )
 
-    result = balancing.getResult(spark=spark)
-    final = final.unionByName(result)
+    df,result = balancing.getResult(spark=spark)
+    final = final.unionByName(df)
+    results.append(result)
 
 balancingio = DataLakeIO(
     process='write',
@@ -62,7 +64,11 @@ writer = DataWriter(
     format='delta',
     spark=spark
 )
+
 writer.WriteData(df=final)
+if 'Fail' in results:
+    raise Exception("Balancing checks failed. Please review the logs for details.")
+
 stop_spark(spark=spark)
 
 

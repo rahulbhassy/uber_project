@@ -36,6 +36,6 @@ class Balancing:
             result=result,
             date=datetime.now()
         ))
-        return spark.createDataFrame(rows, schema=SCHEMA)
+        return spark.createDataFrame(rows, schema=SCHEMA) ,result
 
 
