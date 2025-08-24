@@ -8,6 +8,7 @@ from pyspark.sql import DataFrame
 from shapely.geometry import Point, Polygon, LineString
 from pyspark.sql import SparkSession
 from Shared.DataLoader import DataLoader
+from delta.tables import DeltaTable
 
 # -- CONFIG --
 import os
@@ -208,6 +209,39 @@ class GeoJsonIO:
 
         print("GeoJSON validation and fixing completed successfully.")
         return output_filename
+
+class MergeIO:
+    def __init__(self,table: str, currentio: DataLakeIO,updateitems: List[str],key_columns: List[str]):
+        self.table = table
+        self.currentio = currentio
+        self.updateitems = updateitems
+        self.key_columns = key_columns
+
+    def merge(self,spark:SparkSession,updated_df: DataFrame):
+        """
+        Merges the updated DataFrame into the current Delta table.
+
+        :param updated_df: DataFrame with new or updated records.
+        :param key_columns: List of columns to use as keys for the merge operation.
+        """
+        print(f"Starting merge operation for table: {self.table}")
+        deltaTable = DeltaTable.forPath(spark, self.currentio.filepath())
+
+        update_expr = {col: f"s.{col}" for col in self.updateitems}
+
+        # Build insert dict dynamically (insert all columns from source DF)
+        insert_expr = {col: f"s.{col}" for col in updated_df.columns}
+        merge_condition = " AND ".join([f"t.{k} = s.{k}" for k in self.key_columns])
+        (deltaTable.alias("t")
+         .merge(
+            updated_df.alias("s"),
+            merge_condition
+        )
+         .whenMatchedUpdate(set=update_expr)  # parameterized updates
+         .whenNotMatchedInsert(values=insert_expr)  # insert all cols
+         .execute()
+         )
+        print(f"Merge operation completed successfully for table: {self.table}")
 
 class DeltaLakeOps:
     def __init__(self,path: str,spark: SparkSession):

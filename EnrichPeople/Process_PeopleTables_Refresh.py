@@ -1,7 +1,6 @@
-from EnrichPeople.Config import config,layer
+from EnrichPeople.Config import config,layer , keys, updateitems
 from Shared.sparkconfig import create_spark_session_large
-from Shared.FileIO import SourceObjectAssignment , DataLakeIO
-from Shared.DataWriter import DataWriter
+from Shared.FileIO import SourceObjectAssignment , DataLakeIO , MergeIO
 from EnrichPeople.Harmonization import Harmonizer
 from Shared.pyspark_env import setVEnv
 from Shared.FileIO import SparkTableViewer
@@ -44,10 +43,12 @@ destination_data = harmonizer.harmonize(
     dataframes=dataframes,
     currentio=currentio
 )
-datawriter = DataWriter(
-    loadtype=loadtype,
-    path=currentio.filepath(),
-    spark=spark
+mergeconfig = MergeIO(
+    table=table,
+    currentio= currentio,
+    updateitems=updateitems.get(table),
+    key_columns= keys.get(table)
 )
-datawriter.WriteData(df=destination_data)
+mergeconfig.merge(spark=spark,updated_df=destination_data)
+
 spark.stop()
