@@ -55,20 +55,20 @@ def enrich_grp2_processing_flow(load_type: str, runtype: str = 'prod'):
 
     enrich_weatherimpact_table_task(
         table="weatherimpact",
-        loadtype=load_type,
+        loadtype='full',
         runtype=runtype,
         wait_for=[enrich_fare_tables_task]
     )
 
     enrich_timeseries_table_task(
         table="timeseries",
-        loadtype=load_type,
+        loadtype='full',
         runtype=runtype,
         wait_for=[enrich_fare_tables_task]
     )
 if __name__ == "__main__":
     # Example execution
     enrich_grp2_processing_flow(
-        load_type="full",
+        load_type="delta",
         runtype="prod"
     )

@@ -1,7 +1,11 @@
-JDBC_URL = "jdbc:mysql://localhost:3306/"
-
+JDBC_URL = (
+    "jdbc:sqlserver://192.168.68.104:1433;"
+    "databaseName=UberAnalysis;"
+    "encrypt=true;"
+    "trustServerCertificate=true;"
+)
 JDBC_PROPERTIES = {
-    "user": "root",
-    "password": "Rinthya@1102",
-    "driver": "com.mysql.cj.jdbc.Driver"
+    "user": "rinthya",
+    "password": "StrongPassword123",
+    "driver": "com.microsoft.sqlserver.jdbc.SQLServerDriver"
 }

@@ -1,5 +1,5 @@
 from Shared.pyspark_env import setVEnv
-from Shared.sparkconfig import create_spark_session
+from Shared.sparkconfig import create_spark_session , create_spark_session_jdbc
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO , SourceObjectAssignment
 from EnrichFare.Harmonization import Harmonizer
@@ -20,7 +20,7 @@ def main(table: str, loadtype: str, runtype: str ='dev'):
     setVEnv()
 
     try:
-        spark = create_spark_session()
+        spark = create_spark_session_jdbc() if table == 'timeseries' else create_spark_session()
         logger.info(" Spark session initialized successfully")
         sourcetables = config[table]
         sourceobjectassignments = SourceObjectAssignment(

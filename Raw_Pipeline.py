@@ -72,11 +72,13 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
         load_type=load_type,
         runtype=runtype
     )
+    '''
     load_weather_task(
         source_object="weatherdetails",
         load_type="delta",
         runtype=runtype
     )
+    '''
 
     data_generator_task(
         load_type=load_type,
@@ -86,8 +88,7 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
 
     downstream_dependencies = [
         load_uberfares_task,
-        data_generator_task,
-        load_weather_task
+        data_generator_task
     ]
     load_tripdata_task(
         source_object="tripdetails",

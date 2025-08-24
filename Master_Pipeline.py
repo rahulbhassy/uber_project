@@ -1,9 +1,11 @@
+
 from prefect import flow, task
 from prefect_dask.task_runners import DaskTaskRunner
 from prefect import get_run_logger
 from Raw_Pipeline import raw_processing_flow
 from Enrich_PipelineGRP1 import enrich_grp1_processing_flow
 from Enrich_PipelineGRP2 import enrich_grp2_processing_flow
+from PowerBIRefresh_Pipeline import powerbirefresh_flow
 
 @flow(
     name="Master_Uber_Processing_Pipeline",
@@ -37,6 +39,19 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
         runtype=runtype,
         wait_for=[raw_processing_flow,enrich_grp1_processing_flow]
     )
+
+    logger.info("Starting PowerBI Refresh")
+    powerbirefresh_flow(
+        configname=['all'],
+        loadtype='full',
+        runtype=runtype,
+        wait_for=[
+            raw_processing_flow,
+            enrich_grp1_processing_flow,
+            enrich_grp2_processing_flow
+        ]
+    )
+
 
 if __name__ == "__main__":
     # Example usage

@@ -1,7 +1,7 @@
 from pyspark.sql import DataFrame, SparkSession
 from Shared.FileIO import DataLakeIO
 from Shared.DataLoader import DataLoader
-from pyspark.sql.functions import expr, col, lit , round
+from pyspark.sql.functions import expr, col, lit , round , broadcast
 
 _KEY_COLUMN = "trip_id"
 
@@ -88,17 +88,22 @@ class Harmonizer:
 
     def harmonize(self, spark: SparkSession):
         print("Starting harmonization")
+        # create one broadcasted DataFrame and cache it so Spark does not rebuild it twice
+        b_df = broadcast(self.boroughs_df).cache()
 
+        # materialize the cache (forces a single read/serialize on driver)
+        _ = b_df.count()
+        print("Materialized boroughs_df (broadcast/cache)")
         print("Performing spatial joins")
         enriched_uber = (
             self.sourcedata.alias("u")
             .join(
-                self.boroughs_df.alias("p"),
+                b_df.alias("p"),
                 self.pickup_condition,
                 "left"
             )
             .join(
-                self.boroughs_df.alias("d"),
+                b_df.alias("d"),
                 self.dropoff_condition,
                 "left"
             )
