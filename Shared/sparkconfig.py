@@ -24,6 +24,28 @@ def create_spark_session():
 
     return spark
 
+def create_spark_session_large():
+
+    spark = SparkSession.builder \
+        .appName("ML") \
+        .master("local[4]") \
+        .config("spark.driver.memory", "6g") \
+        .config("spark.executor.memory", "4g") \
+        .config("spark.memory.fraction", "0.6") \
+        .config("spark.memory.storageFraction", "0.4") \
+        .config("spark.jars",
+                "file:///C:/Spark/spark-3.4.4-bin-hadoop3/jars/delta-core_2.12-2.4.0.jar,"
+                "file:///C:/Users/HP/uber_project/config/mysql-connector-j-8.0.33.jar"
+                ) \
+        .config("spark.jars.packages", "io.delta:delta-core_2.12:2.4.0") \
+        .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension") \
+        .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog") \
+        .config("spark.driver.extraJavaOptions",
+                "-Dlog4j.configuration=file:///C:/Users/HP/uber_project/Shared/log4j.properties") \
+        .getOrCreate()
+
+    return spark
+
 def create_spark_session_jdbc():
     # Read the configuration file for any Spark settings
     config = configparser.ConfigParser()

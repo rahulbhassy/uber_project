@@ -1,16 +1,17 @@
 from EnrichPeople.Config import config,layer
-from Shared.sparkconfig import create_spark_session
-from Shared.FileIO import SourceObjectAssignment
+from Shared.sparkconfig import create_spark_session_large
+from Shared.FileIO import SourceObjectAssignment , DataLakeIO
 from Shared.DataWriter import DataWriter
 from EnrichPeople.Harmonization import Harmonizer
 from Shared.pyspark_env import setVEnv
+from Shared.FileIO import SparkTableViewer
 
 setVEnv()
 table = "customerprofile"
 loadtype = 'full'
 runtype = 'prod'
 
-spark = create_spark_session()
+spark = create_spark_session_large()
 sourcetables = config[table]
 
 sourceobjectassignments = SourceObjectAssignment(
@@ -30,7 +31,23 @@ harmonizer = Harmonizer(
     loadtype=loadtype,
     runtype=runtype
 )
+currentio = DataLakeIO(
+    process='write',
+    table=table,
+    state='current',
+    layer=layer.get(table),
+    loadtype=loadtype,
+    runtype=runtype
+)
 destination_data = harmonizer.harmonize(
     spark=spark,
-    dataframes=dataframes
+    dataframes=dataframes,
+    currentio=currentio
 )
+datawriter = DataWriter(
+    loadtype=loadtype,
+    path=currentio.filepath(),
+    spark=spark
+)
+datawriter.WriteData(df=destination_data)
+spark.stop()
