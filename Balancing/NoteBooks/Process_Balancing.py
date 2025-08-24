@@ -39,7 +39,7 @@ def main(runtype: str = 'dev', loadtype: str = 'delta', tables: List[str] = 'all
 
             targetio = DataLakeIO(
                 process='read',
-                table=table_name,
+                table=table_name if table_name != 'uberfaresenrich' else 'uberfares',
                 state='current',
                 layer=layer.get(table_name),
                 loadtype=loadtype,

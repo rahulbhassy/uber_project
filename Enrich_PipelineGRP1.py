@@ -4,6 +4,7 @@ from prefect_dask.task_runners import DaskTaskRunner
 from prefect import get_run_logger
 from EnrichUber.NoteBooks import Process_Weather_Uber,Process_Distance_Uber
 from EnrichGeoSpatial.NoteBooks import Process_GeospatialTablesRefresh
+from Balancing.NoteBooks import Process_Balancing
 
 
 @task(name="Enrich_Weather_Uber", tags=["enrich", "weather", "uber"])
@@ -42,6 +43,15 @@ def enrich_geospatial_uber_task(uber: str,borough: str,trip : str, loadtype: str
         runtype=runtype
     )
 
+@task(name="Load_Balancing_EnrichGRP1", tags=["balancing", "etl"])
+def load_balancing_enrichgrp1_task(load_type: str,runtype: str = 'prod'):
+    """Task to process balancing results"""
+    Process_Balancing.main(
+        runtype=runtype,
+        loadtype=load_type,
+        tables=['uber','uberfaresenrich']
+    )
+
 @flow(
     name="Enrich_Uber_GRP1_Processing_Pipeline",
     task_runner=DaskTaskRunner(),  # Remove for sequential execution
@@ -74,6 +84,18 @@ def enrich_grp1_processing_flow(load_type: str,runtype: str = 'prod'):
         loadtype=load_type,
         runtype=runtype,
         wait_for=[enrich_weather_uber_task,enrich_distance_uber_task]
+    )
+
+    downstream_dependencies = [
+        enrich_weather_uber_task,
+        enrich_distance_uber_task,
+        enrich_geospatial_uber_task
+    ]
+
+    load_balancing_enrichgrp1_task(
+        load_type=load_type,
+        runtype=runtype,
+        wait_for=downstream_dependencies
     )
 
 if __name__ == "__main__":

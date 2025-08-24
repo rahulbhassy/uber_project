@@ -8,7 +8,8 @@ layer = {
     "tripdetails" : "raw",
     "fares" : "enrich",
     "uber" : "enrich",
-    "weatherimpact": "enrich"
+    "weatherimpact": "enrich",
+    "uberfaresenrich": "enrich"
 }
 
 SCHEMA = StructType([
@@ -60,6 +61,11 @@ CHECKS = {
         "tables": ["fares", "tripdetails"],
         "sourcequery": "SELECT COUNT(f.trip_id) AS expected_count FROM delta.`{fares}` f INNER JOIN delta.`{tripdetails}` t ON f.trip_id = t.trip_id",
         "targetquery": "SELECT COUNT(*) AS actual_count FROM delta.`{weatherimpact}`"
+    },
+    "uberfaresenrich": {
+        "tables": ["uberfares"],
+        "sourcequery": "SELECT COUNT(u.trip_id) AS expected_count FROM delta.`{uberfares}`",
+        "targetquery": "SELECT COUNT(*) AS actual_count FROM delta.`{uberfaresenrich}`"
     }
 
 }

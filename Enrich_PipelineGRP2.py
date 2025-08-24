@@ -2,6 +2,7 @@ from prefect import flow, task
 from prefect_dask.task_runners import DaskTaskRunner
 from prefect import get_run_logger
 from EnrichFare.NoteBooks import Process_FareTablesRefresh
+from Balancing.NoteBooks import Process_Balancing
 
 @task(name="Enrich_Fare_Table", tags=["enrich", "fare"])
 def enrich_fare_tables_task(table: str, loadtype: str, runtype: str = 'prod'):
@@ -36,6 +37,15 @@ def enrich_timeseries_table_task(table: str, loadtype: str, runtype: str = 'prod
         runtype=runtype
     )
 
+@task(name="Load_Balancing_EnrichGRP2", tags=["balancing", "etl"])
+def load_balancing_enrichgrp2_task(load_type: str,runtype: str = 'prod'):
+    """Task to process balancing results"""
+    Process_Balancing.main(
+        runtype=runtype,
+        loadtype=load_type,
+        tables=['fares','weatherimpact']
+    )
+
 @flow(
     name="Enrich_Uber_GRP2_Processing_Pipeline",
     task_runner=DaskTaskRunner(),  # Remove for sequential execution
@@ -66,6 +76,19 @@ def enrich_grp2_processing_flow(load_type: str, runtype: str = 'prod'):
         runtype=runtype,
         wait_for=[enrich_fare_tables_task]
     )
+
+    downstream_dependencies = [
+        enrich_fare_tables_task,
+        enrich_weatherimpact_table_task,
+        enrich_timeseries_table_task
+    ]
+
+    load_balancing_enrichgrp2_task(
+        load_type=load_type,
+        runtype=runtype,
+        wait_for=downstream_dependencies
+    )
+
 if __name__ == "__main__":
     # Example execution
     enrich_grp2_processing_flow(
