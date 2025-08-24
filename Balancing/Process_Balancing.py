@@ -10,12 +10,13 @@ setVEnv()
 spark = create_spark_session()
 runtype = 'prod'
 loadtype = 'full'
-
+tables = ['all']
+tables = CHECKS.keys() if tables[0] == 'all' else tables
 final = spark.createDataFrame([], SCHEMA)
 results = []
-for table_name, info in CHECKS.items():
+for table_name in tables:
     sourcetable_assignment = SourceObjectAssignment(
-        sourcetables=info['tables'],
+        sourcetables=CHECKS[table_name]['tables'],
         loadtype=loadtype,
         runtype=runtype
     )
@@ -34,10 +35,10 @@ for table_name, info in CHECKS.items():
         runtype=runtype
     )
     target_mapping = {table_name: targetio.filepath()}
-    targetquery = info['targetquery'].format(**target_mapping)
+    targetquery = CHECKS[table_name]['targetquery'].format(**target_mapping)
 
-    source_mapping = {t: io_map[t].filepath() for t in info['tables']}
-    sourcequery = info['sourcequery'].format(**source_mapping)
+    source_mapping = {t: io_map[t].filepath() for t in CHECKS[table_name]['tables']}
+    sourcequery = CHECKS[table_name]['sourcequery'].format(**source_mapping)
 
     balancing = Balancing(
         table=table_name,

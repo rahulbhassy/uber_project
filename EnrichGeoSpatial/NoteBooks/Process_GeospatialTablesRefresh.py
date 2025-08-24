@@ -124,6 +124,7 @@ if __name__ == "__main__":
     exit_code = main(
         uber=args.uber,
         borough=args.borough,
+        trip=args.trip,
         loadtype=args.loadtype,
         runtype=args.runtype
     )

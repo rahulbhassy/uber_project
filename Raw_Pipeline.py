@@ -4,6 +4,7 @@ from SourceUberSatellite.NoteBooks import Process_UberSatellite
 from DataGenerator import IncrementalDataGenerator
 from prefect_dask.task_runners import DaskTaskRunner
 from SourceWeather.NoteBooks import Process_Weather
+from Balancing.NoteBooks import Process_Balancing
 from prefect import get_run_logger
 # Optional for parallel runs
 
@@ -54,6 +55,14 @@ def load_weather_task(source_object: str, load_type: str,runtype: str = 'prod'):
         runtype=runtype
     )
 
+@task(name="Load_Balancing_Raw", tags=["balancing", "etl"])
+def load_balancing_raw_task(load_type: str,runtype: str = 'prod'):
+    """Task to process balancing results"""
+    Process_Balancing.main(
+        runtype=runtype,
+        loadtype=load_type,
+        tables=['uberfares', 'tripdetails', 'customerdetails','driverdetails','vehicledetails']
+    )
 
 # Main workflow
 @flow(
@@ -90,6 +99,7 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
         load_uberfares_task,
         data_generator_task
     ]
+
     load_tripdata_task(
         source_object="tripdetails",
         load_type=load_type,
@@ -101,6 +111,15 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
         load_type=load_type,
         runtype=runtype,
         wait_for=downstream_dependencies
+    )
+    load_balancing_raw_task(
+        load_type=load_type,
+        runtype=runtype,
+        wait_for=[
+            downstream_dependencies,
+            load_tripdata_task,
+            load_ubersatellite_task
+        ]
     )
 
 # Run the flow
