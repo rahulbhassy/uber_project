@@ -4,7 +4,7 @@ from Shared.FileIO import SourceObjectAssignment , DataLakeIO , MergeIO
 from Shared.DataWriter import DataWriter
 from EnrichPeople.Harmonization import Harmonizer
 from Shared.pyspark_env import setVEnv , stop_spark
-from Shared.FileIO import SparkTableViewer
+
 
 
 setVEnv()
