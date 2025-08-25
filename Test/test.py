@@ -13,7 +13,7 @@ from pyspark.sql.functions import avg, col, lit , round
 from Balancing.config import SCHEMA
 
 setVEnv()
-table = 'customerprofile'
+table = 'balancingresults'
 spark = create_spark_session()
 loadtype = 'full'
 
@@ -21,7 +21,7 @@ balancingio = DataLakeIO(
     process='read',
     table=table,
     state='current',
-    layer='enrich',
+    layer='system',
     loadtype=loadtype
 )
 
@@ -32,5 +32,8 @@ reader = DataLoader(
 
 )
 df = reader.LoadData(spark)
-col_list = df.columns
-print(col_list)
+df = df.filter(
+    df.date.like('2025-08-25%')
+)
+viewer = SparkTableViewer(df=df)
+viewer.display()

@@ -64,7 +64,7 @@ CHECKS = {
     },
     "uberfaresenrich": {
         "tables": ["uberfares"],
-        "sourcequery": "SELECT COUNT(u.trip_id) AS expected_count FROM delta.`{uberfares}`",
+        "sourcequery": "SELECT COUNT(trip_id) AS expected_count FROM delta.`{uberfares}`",
         "targetquery": "SELECT COUNT(*) AS actual_count FROM delta.`{uberfaresenrich}`"
     }
 

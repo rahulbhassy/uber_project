@@ -8,9 +8,9 @@ from Shared.DataWriter import DataWriter
 
 setVEnv()
 spark = create_spark_session()
-runtype = 'prod'
+runtype = 'dev'
 loadtype = 'full'
-tables = ['all']
+tables = ['uber','uberfaresenrich']
 tables = CHECKS.keys() if tables[0] == 'all' else tables
 final = spark.createDataFrame([], SCHEMA)
 results = []
@@ -28,7 +28,7 @@ for table_name in tables:
 
     targetio = DataLakeIO(
         process='read',
-        table=table_name,
+        table=table_name if table_name != 'uberfaresenrich' else 'uberfares',
         state='current',
         layer=layer.get(table_name),
         loadtype=loadtype,
