@@ -1,4 +1,4 @@
-from distributed.utils import wait_for
+
 from prefect import flow, task
 from SourceUberFact.NoteBooks import Process_UberFact
 from SourceUberSatellite.NoteBooks import Process_UberSatellite
@@ -7,6 +7,7 @@ from prefect_dask.task_runners import DaskTaskRunner
 from SourceWeather.NoteBooks import Process_Weather
 from Balancing.NoteBooks import Process_Balancing
 from EnrichUber.NoteBooks import Process_Weather_Uber,Process_Distance_Uber
+from PowerBIRefresh_Pipeline import powerbirefresh_flow
 from prefect import get_run_logger
 # Optional for parallel runs
 
@@ -159,6 +160,12 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
     enrich_distance_uber_task(
         table="uberfares",
         loadtype=load_type,
+        runtype=runtype,
+        wait_for=downstream_dependencies
+    )
+    powerbirefresh_flow(
+        configname=['customerdetails','driverdetails','vehicledetails'],
+        loadtype='full',
         runtype=runtype,
         wait_for=downstream_dependencies
     )
