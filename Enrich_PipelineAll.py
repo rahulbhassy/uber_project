@@ -4,6 +4,7 @@ from prefect_dask.task_runners import DaskTaskRunner
 from prefect import get_run_logger
 from Enrich_PipelineGRP1 import enrich_grp1_processing_flow
 from Enrich_PipelineGRP2 import enrich_grp2_processing_flow
+from Enrich_PipelineGRP3 import enrich_grp3_processing_flow
 
 
 @flow(
@@ -29,6 +30,12 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
         load_type=load_type,
         runtype=runtype,
         wait_for=[enrich_grp1_processing_flow]
+    )
+    logger.info("Starting enrichment flow for Group 3")
+    enrich_grp3_processing_flow(
+        load_type='full',
+        runtype=runtype,
+        initial_load='no'
     )
 
 

@@ -9,7 +9,9 @@ layer = {
     "fares" : "enrich",
     "uber" : "enrich",
     "weatherimpact": "enrich",
-    "uberfaresenrich": "enrich"
+    "uberfaresenrich": "enrich",
+    "customerprofile": "enrich",
+    "customerpreference" : "enrich"
 }
 
 SCHEMA = StructType([
@@ -66,6 +68,32 @@ CHECKS = {
         "tables": ["uberfares"],
         "sourcequery": "SELECT COUNT(trip_id) AS expected_count FROM delta.`{uberfares}`",
         "targetquery": "SELECT COUNT(*) AS actual_count FROM delta.`{uberfaresenrich}`"
+    },
+    "customerprofile":{
+        "tables" : ["customerdetails","tripdetails","fares"],
+        "sourcequery": """
+            WITH fares_trip AS (
+                SELECT t.customer_id AS customer_id FROM delta.`{tripdetails}` t 
+                INNER JOIN delta.`{fares}` f ON f.trip_id = t.trip_id
+                GROUP BY t.customer_id
+            )
+            SELECT COUNT(c.customer_id) AS expected_count FROM delta.`{customerdetails}` c INNER JOIN fares_trip ft ON c.customer_id = ft.customer_id
+                """,
+        "targetquery" : "SELECT COUNT(customer_id) AS actual_count FROM delta.`{customerprofile}`"
+
+    },
+    "customerpreference": {
+        "tables" : ["customerprofile","fares","tripdetails","uberfares"],
+        "sourcequery": """
+            WITH combined AS (
+                SELECT t.customer_id AS customer_id FROM delta.`{tripdetails}` t 
+                INNER JOIN delta.`{fares}` f ON f.trip_id = t.trip_id
+                INNER JOIN delta.`{uberfares}` u ON u.trip_id = t.trip_id
+                GROUP BY t.customer_id
+            )
+            SELECT COUNT(c.customer_id) AS expected_count FROM delta.`{customerprofile}` c INNER JOIN combined ft ON c.customer_id = ft.customer_id
+        """,
+        "targetquery": "SELECT COUNT(customer_id) AS actual_count FROM delta.`{customerpreference}`"
     }
 
 }

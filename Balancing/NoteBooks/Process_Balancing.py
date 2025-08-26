@@ -78,6 +78,7 @@ def main(runtype: str = 'dev', loadtype: str = 'delta', tables: List[str] = 'all
         )
 
         writer.WriteData(df=final)
+        final.show()
         if 'Fail' in results:
             raise Exception("Balancing checks failed. Please review the logs for details.")
 

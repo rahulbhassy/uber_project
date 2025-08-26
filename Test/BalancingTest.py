@@ -1,5 +1,3 @@
-from functools import reduce
-
 from Shared.pyspark_env import setVEnv
 from Shared.sparkconfig import create_spark_session
 from SourceWeather.Initialiser import Init
@@ -12,27 +10,6 @@ from Shared.FileIO import SparkTableViewer
 from pyspark.sql.functions import avg, col, lit , round
 from Balancing.config import SCHEMA
 
-setVEnv()
-table = 'balancingresults'
-spark = create_spark_session()
-loadtype = 'full'
-
-balancingio = DataLakeIO(
-    process='read',
-    table=table,
-    state='current',
-    layer='system',
-    loadtype=loadtype
-)
-
-reader = DataLoader(
-    loadtype=loadtype,
-    path=balancingio.filepath(),
-    filetype='delta'
-
-)
-df = reader.LoadData(spark)
-
-viewer = SparkTableViewer(df=df)
-viewer.display()
-
+targetquery = """
+    SELECT COUNT(*)
+"""

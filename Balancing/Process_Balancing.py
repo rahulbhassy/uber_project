@@ -8,9 +8,9 @@ from Shared.DataWriter import DataWriter
 
 setVEnv()
 spark = create_spark_session()
-runtype = 'dev'
+runtype = 'prod'
 loadtype = 'full'
-tables = ['uber','uberfaresenrich']
+tables = ['customerprofile','customerpreference']
 tables = CHECKS.keys() if tables[0] == 'all' else tables
 final = spark.createDataFrame([], SCHEMA)
 results = []
@@ -69,7 +69,7 @@ writer = DataWriter(
 writer.WriteData(df=final)
 if 'Fail' in results:
     raise Exception("Balancing checks failed. Please review the logs for details.")
-
+final.show()
 stop_spark(spark=spark)
 
 
