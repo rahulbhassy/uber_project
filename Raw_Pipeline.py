@@ -1,9 +1,13 @@
+
 from prefect import flow, task
 from SourceUberFact.NoteBooks import Process_UberFact
 from SourceUberSatellite.NoteBooks import Process_UberSatellite
 from DataGenerator import IncrementalDataGenerator
 from prefect_dask.task_runners import DaskTaskRunner
 from SourceWeather.NoteBooks import Process_Weather
+from Balancing.NoteBooks import Process_Balancing
+from EnrichUber.NoteBooks import Process_Weather_Uber,Process_Distance_Uber
+from PowerBIRefresh_Pipeline import powerbirefresh_flow
 from prefect import get_run_logger
 # Optional for parallel runs
 
@@ -54,6 +58,38 @@ def load_weather_task(source_object: str, load_type: str,runtype: str = 'prod'):
         runtype=runtype
     )
 
+@task(name="Load_Balancing_Raw", tags=["balancing", "etl"])
+def load_balancing_raw_task(load_type: str,runtype: str = 'prod'):
+    """Task to process balancing results"""
+    Process_Balancing.main(
+        runtype=runtype,
+        loadtype=load_type,
+        tables=['uberfares', 'tripdetails', 'customerdetails','driverdetails','vehicledetails']
+    )
+
+@task(name="Enrich_Weather_Uber", tags=["enrich", "weather", "uber"])
+def enrich_weather_uber_task(uber: str , weather: str, load_type: str, runtype: str = 'prod'):
+    """Task to enrich Uber data with weather information"""
+    logger = get_run_logger()
+    logger.info("Enriching Uber data with weather information")
+    Process_Weather_Uber.main(
+        uber=uber,
+        weather=weather,
+        loadtype=load_type,
+        runtype=runtype
+    )
+
+@task(name="Enrich_Distance_Uber", tags=["enrich", "distance", "uber"])
+def enrich_distance_uber_task(table: str, loadtype: str, runtype: str):
+    logger = get_run_logger()
+    """Task to enrich Uber data with distance information"""
+    logger.info("Enriching Uber data with distance information")
+    Process_Distance_Uber.main(
+        table=table,
+        loadtype=loadtype,
+        runtype=runtype
+    )
+
 
 # Main workflow
 @flow(
@@ -90,6 +126,7 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
         load_uberfares_task,
         data_generator_task
     ]
+
     load_tripdata_task(
         source_object="tripdetails",
         load_type=load_type,
@@ -102,7 +139,37 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
         runtype=runtype,
         wait_for=downstream_dependencies
     )
+    downstream_dependencies.append(load_tripdata_task)
+    downstream_dependencies.append(load_ubersatellite_task)
+    load_balancing_raw_task(
+        load_type='full',
+        runtype=runtype,
+        wait_for=downstream_dependencies
+    )
+    downstream_dependencies.append(load_balancing_raw_task)
 
-# Run the flow
+    enrich_weather_uber_task(
+        uber="uberfares",
+        weather="weatherdetails",
+        load_type=load_type,
+        runtype=runtype,
+        wait_for=downstream_dependencies
+    )
+    downstream_dependencies.append(enrich_weather_uber_task)
+
+    enrich_distance_uber_task(
+        table="uberfares",
+        loadtype=load_type,
+        runtype=runtype,
+        wait_for=downstream_dependencies
+    )
+    powerbirefresh_flow(
+        configname=['customerdetails','driverdetails','vehicledetails'],
+        loadtype='full',
+        runtype=runtype,
+        wait_for=downstream_dependencies
+    )
+
+
 if __name__ == "__main__":
     raw_processing_flow(load_type='delta',runtype='prod')

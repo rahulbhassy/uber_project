@@ -1,4 +1,4 @@
-from Shared.pyspark_env import setVEnv
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.sparkconfig import create_spark_session
 from Shared.FileIO import SourceObjectAssignment
 from Shared.FileIO import DataLakeIO
@@ -10,11 +10,13 @@ setVEnv()
 spark = create_spark_session()
 runtype = 'prod'
 loadtype = 'full'
-
+tables = ['customerprofile','customerpreference']
+tables = CHECKS.keys() if tables[0] == 'all' else tables
 final = spark.createDataFrame([], SCHEMA)
-for table_name, info in CHECKS.items():
+results = []
+for table_name in tables:
     sourcetable_assignment = SourceObjectAssignment(
-        sourcetables=info['tables'],
+        sourcetables=CHECKS[table_name]['tables'],
         loadtype=loadtype,
         runtype=runtype
     )
@@ -26,17 +28,17 @@ for table_name, info in CHECKS.items():
 
     targetio = DataLakeIO(
         process='read',
-        table=table_name,
+        table=table_name if table_name != 'uberfaresenrich' else 'uberfares',
         state='current',
         layer=layer.get(table_name),
         loadtype=loadtype,
         runtype=runtype
     )
     target_mapping = {table_name: targetio.filepath()}
-    targetquery = info['targetquery'].format(**target_mapping)
+    targetquery = CHECKS[table_name]['targetquery'].format(**target_mapping)
 
-    source_mapping = {t: io_map[t].filepath() for t in info['tables']}
-    sourcequery = info['sourcequery'].format(**source_mapping)
+    source_mapping = {t: io_map[t].filepath() for t in CHECKS[table_name]['tables']}
+    sourcequery = CHECKS[table_name]['sourcequery'].format(**source_mapping)
 
     balancing = Balancing(
         table=table_name,
@@ -44,8 +46,9 @@ for table_name, info in CHECKS.items():
         targetquery=targetquery,
     )
 
-    result = balancing.getResult(spark=spark)
-    final = final.unionByName(result)
+    df,result = balancing.getResult(spark=spark)
+    final = final.unionByName(df)
+    results.append(result)
 
 balancingio = DataLakeIO(
     process='write',
@@ -62,7 +65,11 @@ writer = DataWriter(
     format='delta',
     spark=spark
 )
+
 writer.WriteData(df=final)
-spark.stop()
+if 'Fail' in results:
+    raise Exception("Balancing checks failed. Please review the logs for details.")
+final.show()
+stop_spark(spark=spark)
 
 

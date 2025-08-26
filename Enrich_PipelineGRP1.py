@@ -2,32 +2,9 @@
 from prefect import flow, task
 from prefect_dask.task_runners import DaskTaskRunner
 from prefect import get_run_logger
-from EnrichUber.NoteBooks import Process_Weather_Uber,Process_Distance_Uber
 from EnrichGeoSpatial.NoteBooks import Process_GeospatialTablesRefresh
+from Balancing.NoteBooks import Process_Balancing
 
-
-@task(name="Enrich_Weather_Uber", tags=["enrich", "weather", "uber"])
-def enrich_weather_uber_task(uber: str , weather: str, load_type: str, runtype: str = 'prod'):
-    """Task to enrich Uber data with weather information"""
-    logger = get_run_logger()
-    logger.info("Enriching Uber data with weather information")
-    Process_Weather_Uber.main(
-        uber=uber,
-        weather=weather,
-        loadtype=load_type,
-        runtype=runtype
-    )
-
-@task(name="Enrich_Distance_Uber", tags=["enrich", "distance", "uber"])
-def enrich_distance_uber_task(table: str, loadtype: str, runtype: str):
-    logger = get_run_logger()
-    """Task to enrich Uber data with distance information"""
-    logger.info("Enriching Uber data with distance information")
-    Process_Distance_Uber.main(
-        table=table,
-        loadtype=loadtype,
-        runtype=runtype
-    )
 
 @task(name="Enrich_Geospatial_Tables", tags=["enrich", "geospatial"])
 def enrich_geospatial_uber_task(uber: str,borough: str,trip : str, loadtype: str, runtype: str = 'prod'):
@@ -42,6 +19,15 @@ def enrich_geospatial_uber_task(uber: str,borough: str,trip : str, loadtype: str
         runtype=runtype
     )
 
+@task(name="Load_Balancing_EnrichGRP1", tags=["balancing", "etl"])
+def load_balancing_enrichgrp1_task(load_type: str,runtype: str = 'prod'):
+    """Task to process balancing results"""
+    Process_Balancing.main(
+        runtype=runtype,
+        loadtype=load_type,
+        tables=['uber','uberfaresenrich']
+    )
+
 @flow(
     name="Enrich_Uber_GRP1_Processing_Pipeline",
     task_runner=DaskTaskRunner(),  # Remove for sequential execution
@@ -53,19 +39,6 @@ def enrich_grp1_processing_flow(load_type: str,runtype: str = 'prod'):
     logger = get_run_logger()
     logger.info(f"Starting pipeline with load_type: {load_type}")
 
-    enrich_weather_uber_task(
-        uber="uberfares",
-        weather="weatherdetails",
-        load_type=load_type,
-        runtype=runtype
-    )
-
-    enrich_distance_uber_task(
-        table="uberfares",
-        loadtype=load_type,
-        runtype=runtype,
-        wait_for=[enrich_weather_uber_task]
-    )
 
     enrich_geospatial_uber_task(
         uber="uberfares",
@@ -73,12 +46,17 @@ def enrich_grp1_processing_flow(load_type: str,runtype: str = 'prod'):
         trip="tripdetails",
         loadtype=load_type,
         runtype=runtype,
-        wait_for=[enrich_weather_uber_task,enrich_distance_uber_task]
+    )
+
+    load_balancing_enrichgrp1_task(
+        load_type='full',
+        runtype=runtype,
+        wait_for=enrich_geospatial_uber_task
     )
 
 if __name__ == "__main__":
     # Example execution
     enrich_grp1_processing_flow(
-        load_type="delta",
-        runtype="prod"
+        load_type="full",
+        runtype="dev"
     )

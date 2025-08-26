@@ -1,6 +1,6 @@
 from sedona.spark import SedonaContext
 from Shared.sparkconfig import create_spark_session_sedona
-from Shared.pyspark_env import setEnv
+from Shared.pyspark_env import setEnv , stop_spark
 from Shared.DataLoader import DataLoader
 from Shared.DataWriter import DataWriter
 from Shared.FileIO import DataLakeIO
@@ -99,9 +99,8 @@ def main(uber:str,borough: str,trip:str,loadtype: str, runtype: str = 'prod'):
             spark=spark
         )
         datawriter.WriteData(df=enriched_uber)
-        spark.stop()
         logger.info("Data enriched and written successfully...")
-        spark.stop()
+        stop_spark(spark=spark)
         logger.info(f"Processing completed at {datetime.datetime.now()}")
         return 0
 
@@ -125,6 +124,7 @@ if __name__ == "__main__":
     exit_code = main(
         uber=args.uber,
         borough=args.borough,
+        trip=args.trip,
         loadtype=args.loadtype,
         runtype=args.runtype
     )

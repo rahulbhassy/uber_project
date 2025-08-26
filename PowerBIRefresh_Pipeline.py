@@ -20,7 +20,7 @@ def SaveToSQLServer(configname: List[str],loadtype: str, runtype: str = 'prod'):
     description="ETL pipeline for Uber data processing",
     version="1.0"
 )
-def powerbirefresh_flow(configname: List[str],loadtype: str, runtype: str = 'prod'):
+def powerbirefresh_flow(configname: List[str],loadtype: str, runtype: str = 'dev'):
     logger = get_run_logger()
     logger.info(f"Starting pipeline with load_type: {loadtype}")
 

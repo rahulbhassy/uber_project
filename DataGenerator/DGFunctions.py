@@ -4,7 +4,7 @@ from faker import Faker
 from datetime import datetime, timedelta , date
 import os
 from typing import List, Any
-
+from Shared.pyspark_env import stop_spark
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import max, col
 from Shared.sparkconfig import create_spark_session
@@ -75,6 +75,7 @@ class GetData:
     def get_max_ids(self,df=DataFrame):
         numeric_max_df = df.agg(max(col(self._KEY_COLUMNS[self.table]).cast("long")).alias("max_id"))
         return numeric_max_df.collect()[0]["max_id"]
+
 
 
 

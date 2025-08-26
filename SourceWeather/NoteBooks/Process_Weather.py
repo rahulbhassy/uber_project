@@ -1,4 +1,4 @@
-from Shared.pyspark_env import setVEnv
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.sparkconfig import create_spark_session
 from SourceWeather.Initialiser import Init
 from SourceWeather.Schema import weather_schema
@@ -49,6 +49,7 @@ def main(table, loadtype,runtype='prod'):
             spark=spark
         )
         writer.WriteData(df=weatherdetails)
+        stop_spark(spark=spark)
         logger.info(f"Processing completed at {datetime.datetime.now()}")
         return 0
 

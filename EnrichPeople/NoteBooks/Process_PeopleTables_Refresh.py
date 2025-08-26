@@ -1,28 +1,27 @@
-from Shared.pyspark_env import setVEnv , stop_spark
-from Shared.sparkconfig import create_spark_session , create_spark_session_jdbc
+from EnrichPeople.Config import config,layer , keys, updateitems
+from Shared.sparkconfig import create_spark_session_large
+from Shared.FileIO import SourceObjectAssignment , DataLakeIO , MergeIO
 from Shared.DataWriter import DataWriter
-from Shared.FileIO import DataLakeIO , SourceObjectAssignment
-from EnrichFare.Harmonization import Harmonizer
-from EnrichFare.Config import config, layer
+from EnrichPeople.Harmonization import Harmonizer
+from Shared.pyspark_env import setVEnv , stop_spark
 from Shared.Logger import Logger
 import argparse
 import sys
 import datetime
 
-def main(table: str, loadtype: str, runtype: str ='dev'):
-
-    logging = Logger(notebook_name='Process_FareTablesRefresh')
+def main(table: str, loadtype: str = 'full', runtype: str = 'dev', initial_load: str = 'no'):
+    logging = Logger(notebook_name='Process_PeopleTables_Refresh')
     logger = logging.setup_logger()
 
     # Log critical environment information
-    logger.info(f"Starting UberFares Data Processing")
-    logger.info(f"Parameters:, table={table}, loadtype={loadtype}")
-    setVEnv()
-
+    logger.info(f"Starting Peoples Table Data Processing")
+    logger.info(f"Parameters:, sourceobject={table}, loadtype={loadtype}")
     try:
-        spark = create_spark_session_jdbc() if table == 'timeseries' else create_spark_session()
+        setVEnv()
         logger.info(" Spark session initialized successfully")
+        spark = create_spark_session_large()
         sourcetables = config[table]
+
         sourceobjectassignments = SourceObjectAssignment(
             sourcetables=sourcetables,
             loadtype=loadtype,
@@ -35,7 +34,12 @@ def main(table: str, loadtype: str, runtype: str ='dev'):
             spark=spark,
             readers=sourcereaders
         )
-        logger.info("Loaded Source data...")
+        logger.info("Loaded data...")
+        harmonizer = Harmonizer(
+            table=table,
+            loadtype=loadtype,
+            runtype=runtype
+        )
         currentio = DataLakeIO(
             process='write',
             table=table,
@@ -44,25 +48,30 @@ def main(table: str, loadtype: str, runtype: str ='dev'):
             loadtype=loadtype,
             runtype=runtype
         )
-        harmonizer = Harmonizer(
-            table=table,
-            loadtype=loadtype,
-            runtype=runtype
-        )
         destination_data = harmonizer.harmonize(
             spark=spark,
             dataframes=dataframes,
             currentio=currentio
         )
-        logger.info("Data harmonized...")
 
         datawriter = DataWriter(
             loadtype=loadtype,
             path=currentio.filepath(),
-            format='delta',
-            spark=spark
+            spark=spark,
+            format='delta'
         )
-        datawriter.WriteData(df=destination_data)
+
+        if initial_load == 'yes':
+            datawriter.WriteData(df=destination_data)
+        else:
+            datawriter.WriteParquet(df=destination_data)
+            mergeconfig = MergeIO(
+                table=table,
+                currentio= currentio,
+                key_columns= keys.get(table)
+            )
+            mergeconfig.merge(spark=spark,updated_df=destination_data)
+
         stop_spark(spark=spark)
         logger.info(f"Processing completed at {datetime.datetime.now()}")
         return 0
@@ -78,9 +87,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--table", required=True)
-    parser.add_argument("--loadtype", required=True)
-    parser.add_argument("--runtype", required=False)
+    parser.add_argument("--loadtype", required=False , default='full')
+    parser.add_argument("--runtype", required=True)
+    parser.add_argument("--initial_load", required=False , default='no')
 
     args = parser.parse_args()
-    exit_code = main(args.sourceobject, args.loadtype,args.runtype)
+    exit_code = main(args.sourceobject, args.loadtype,args.runtype, args.initial_load)
     sys.exit(exit_code)
