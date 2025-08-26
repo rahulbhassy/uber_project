@@ -90,5 +90,5 @@ if __name__ == "__main__":
     enrich_grp3_processing_flow(
         load_type="full",
         runtype="prod",
-        initial_load='no'
+        initial_load='yes'
     )

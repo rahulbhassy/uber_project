@@ -35,7 +35,7 @@ def master_processing_flow(load_type: str,runtype: str = 'prod'):
     enrich_grp3_processing_flow(
         load_type='full',
         runtype=runtype,
-        initial_load='no'
+        initial_load='yes'
     )
 
 

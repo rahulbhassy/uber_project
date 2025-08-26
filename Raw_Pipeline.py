@@ -170,7 +170,6 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
         wait_for=downstream_dependencies
     )
 
-# Run the flow
 
 if __name__ == "__main__":
     raw_processing_flow(load_type='delta',runtype='prod')
