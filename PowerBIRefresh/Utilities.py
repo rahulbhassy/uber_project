@@ -8,19 +8,24 @@ refreshtables = [
     "driverdetails",
     "vehicledetails",
     "customerpreference",
-    "customerprofile"
+    "customerprofile",
+    "driverprofile",
+    "driverpreference",
+    "driverperformance"
 ]
 
 schema = {
     "fares" : "fares",
     "weatherimpact" : "fares",
     "timeseries" : "fares",
-    "custmerdetails" : "raw",
+    "customerdetails" : "raw",
     "driverdetails" : "raw",
     "vehicledetails" : "raw",
     "customerpreference" : "people",
-    "customerprofile" : "people"
-
+    "customerprofile" : "people",
+    "driverpreference": "people",
+    "driverprofile": "people",
+    "driverperformance" : "people"
 }
 
 layer = {
@@ -31,5 +36,8 @@ layer = {
     "driverdetails" : "raw",
     "vehicledetails" : "raw",
     "customerpreference" : "enrich",
-    "customerprofile" : "enrich"
+    "customerprofile" : "enrich",
+    "driverpreference": "enrich",
+    "driverprofile": "enrich",
+    "driverperformance": "enrich"
 }

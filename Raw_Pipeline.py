@@ -8,6 +8,7 @@ from SourceWeather.NoteBooks import Process_Weather
 from Balancing.NoteBooks import Process_Balancing
 from EnrichUber.NoteBooks import Process_Weather_Uber,Process_Distance_Uber
 from PowerBIRefresh_Pipeline import powerbirefresh_flow
+from Optimize_Pipeline import optimize_flow
 from prefect import get_run_logger
 # Optional for parallel runs
 
@@ -98,7 +99,7 @@ def enrich_distance_uber_task(table: str, loadtype: str, runtype: str):
     description="ETL pipeline for Uber data processing",
     version="1.0"
 )
-def raw_processing_flow(load_type: str,runtype: str = 'prod'):
+def raw_processing_flow(load_type: str,runtype: str = 'prod',optimise: bool = False):
     """Orchestrates Uber data processing workflow"""
     logger = get_run_logger()
     logger.info(f"Starting pipeline with load_type: {load_type}")
@@ -141,6 +142,7 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
     )
     downstream_dependencies.append(load_tripdata_task)
     downstream_dependencies.append(load_ubersatellite_task)
+
     load_balancing_raw_task(
         load_type='full',
         runtype=runtype,
@@ -163,6 +165,24 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
         runtype=runtype,
         wait_for=downstream_dependencies
     )
+    downstream_dependencies.append(enrich_distance_uber_task)
+    if optimise:
+        tables = {
+            None : "raw",
+            "uberfares" : "enrich",
+            "uberfaresweather" : "system"
+        }
+        for table , layer in tables.items():
+            optimize_flow(
+                tabletype=layer,
+                load_type='full',
+                runtype=runtype,
+                altertable=True,
+                table='uberfares' if table == 'uberfaresweather' else table,
+                wait_for=downstream_dependencies
+            )
+        downstream_dependencies.append(optimize_flow)
+
     powerbirefresh_flow(
         configname=['customerdetails','driverdetails','vehicledetails'],
         loadtype='full',
@@ -172,4 +192,4 @@ def raw_processing_flow(load_type: str,runtype: str = 'prod'):
 
 
 if __name__ == "__main__":
-    raw_processing_flow(load_type='delta',runtype='prod')
+    raw_processing_flow(load_type='delta',runtype='prod',optimise=False)

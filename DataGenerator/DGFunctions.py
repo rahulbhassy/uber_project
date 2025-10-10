@@ -8,7 +8,7 @@ from Shared.pyspark_env import stop_spark
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import max, col
 from Shared.sparkconfig import create_spark_session
-from Shared.FileIO import DataLakeIO
+from Shared.FileIO import DataLakeIO, SourceObjectAssignment
 from Shared.DataLoader import DataLoader
 
 
@@ -31,6 +31,29 @@ class GetData:
         self.table = table
         self.spark = create_spark_session()
         self.runtype = runtype
+    def _temp_gettrip_ids(self):
+        table = ['uberfares', 'tripdetails']
+        loadtype = 'full'
+
+        assign = SourceObjectAssignment(
+            loadtype=loadtype,
+            runtype='prod',
+            sourcetables=table
+        )
+        dlassign = assign.assign_DataLakeIO(layer={'uberfares': 'raw', 'tripdetails': 'raw'})
+        readers = assign.assign_Readers(io_map=dlassign)
+        dataframes = assign.getData(spark=self.spark, readers=readers)
+        uberfares = dataframes['uberfares'].select('trip_id')
+        tripdetails = dataframes['tripdetails'].select('trip_id')
+        trip_ids = uberfares.join(
+            tripdetails,
+            on='trip_id',
+            how='leftanti'
+        )
+        rows = trip_ids.select("trip_id").collect()
+        tripids: List[Any] = [row.trip_id for row in rows]
+        print(f"Trip ids loaded with count : {len(tripids)}")
+        return tripids
 
     def _get_trip_ids(self):
         deltafileio = DataLakeIO(
@@ -550,8 +573,8 @@ class TripGenerator:
                 'tip_amount': tip_amount,
                 'payment_method': random.choice(payment_methods),
                 'trip_status': random.choice(trip_statuses),
-                'customer_rating': random.choice([None,2.5,2,1.5,1, 3,3,3.5,3.5,3.5,4, 4.5, 4, 5, 5, 5]),
-                'driver_rating': random.choice([None,2.5,2,1.5,1, 3,3,3.5,3.5,3.5,4, 4.5, 4, 5, 5, 5]),
+                'customer_rating': random.choice([None,2.5,2,1.5,1, 3,3,3.5,4, 4.5,4.5,4.5,4.5,4.5,4.5,4.5,4.5, 4, 5, 5, 5, 5,5 ,5 ,5 ,5, 5, 5]),
+                'driver_rating': random.choice([None,2.5,2,1.5,1, 3,3,3.5,4, 4.5,4.5,4.5,4.5,4.5,4.5,4.5,4.5, 4, 5, 5, 5, 5,5 ,5 ,5 ,5, 5, 5]),
                 'trip_intention': intention
             })
 

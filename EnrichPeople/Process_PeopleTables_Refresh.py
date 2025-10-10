@@ -6,9 +6,8 @@ from EnrichPeople.Harmonization import Harmonizer
 from Shared.pyspark_env import setVEnv , stop_spark
 
 
-
 setVEnv()
-table = "customerpreference"
+table = "driverprofile"
 loadtype = 'full'
 runtype = 'prod'
 initial_load = 'yes'
@@ -54,6 +53,7 @@ datawriter = DataWriter(
     format='delta'
 )
 
+
 if initial_load == 'yes':
     datawriter.WriteData(df=destination_data)
 else:
@@ -63,6 +63,5 @@ else:
         currentio= currentio,
         key_columns= keys.get(table)
     )
-    mergeconfig.merge(spark=spark,updated_df=destination_data)
 
 stop_spark(spark=spark)

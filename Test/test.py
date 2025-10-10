@@ -8,31 +8,30 @@ from SourceWeather.APILoader import WeatherAPI
 from Shared.FileIO import DataLakeIO
 from Shared.DataWriter import DataWriter
 from Shared.DataLoader import DataLoader
-from Shared.FileIO import SparkTableViewer
+from Shared.FileIO import SparkTableViewer,DeltaLakeOps , SourceObjectAssignment
 from pyspark.sql.functions import avg, col, lit , round
 from Balancing.config import SCHEMA
 
 setVEnv()
-table = 'balancingresults'
-spark = create_spark_session()
+table = ['uberfares','tripdetails']
 loadtype = 'full'
 
-balancingio = DataLakeIO(
-    process='read',
-    table=table,
-    state='current',
-    layer='system',
-    loadtype=loadtype
-)
-
-reader = DataLoader(
+assign = SourceObjectAssignment(
     loadtype=loadtype,
-    path=balancingio.filepath(),
-    filetype='delta'
-
+    runtype='prod',
+    sourcetables=table
 )
-df = reader.LoadData(spark)
+dlassign = assign.assign_DataLakeIO(layer={'uberfares':'raw','tripdetails':'raw'})
+readers = assign.assign_Readers(io_map=dlassign)
+dataframes = assign.getData(spark=spark,readers=readers)
+uberfares = dataframes['uberfares'].select('trip_id')
+tripdetails = dataframes['tripdetails'].select('trip_id')
+trip_ids = uberfares.join(
+    tripdetails,
+    on='trip_id',
+    how='leftanti'
+)
+print(trip_ids.count())
 
-viewer = SparkTableViewer(df=df)
-viewer.display()
+
 
