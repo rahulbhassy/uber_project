@@ -2,7 +2,7 @@
 	"name": "4_explore_trip_type",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "USE nyc_taxi_discovery;\nSELECT\n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_type.tsv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE,\n        FIELDTERMINATOR = '\\t',\n        ROWTERMINATOR = '\\n'\n    ) AS trip_type;",

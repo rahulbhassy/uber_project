@@ -2,7 +2,7 @@
 	"name": "data_quality_checks",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "",

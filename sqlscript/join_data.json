@@ -2,7 +2,7 @@
 	"name": "join_data",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "USE nyc_taxi_discovery;\n\nSELECT \ntaxi_zone.borough , COUNT(1) AS number_of_trips\nFROM OPENROWSET(\n    BULK 'trip_data_green_delta/',\n    DATA_SOURCE = 'nyc_taxi_data_raw',\n    FORMAT = 'DELTA'\n) AS trip_data\nJOIN \n    OPENROWSET(\n        BULK 'taxi_zone.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIRSTROW = 2,\n        FIELDTERMINATOR = ',',\n        ROWTERMINATOR = '\\n'\n    )\n    WITH (\n        locationid SMALLINT 1,\n        borough VARCHAR(15) 2,\n        zone VARCHAR(50) 3,\n        service_zone VARCHAR(15) 4\n    ) AS taxi_zone\nON trip_data.PULocationID = taxi_zone.locationid\nGROUP BY taxi_zone.borough\nORDER BY COUNT(1) DESC\n",

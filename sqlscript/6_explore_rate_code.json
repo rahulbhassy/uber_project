@@ -2,7 +2,7 @@
 	"name": "6_explore_rate_code",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "USE nyc_taxi_discovery;\nSELECT\n    rate_code_id , rate_code\nFROM\n    OPENROWSET(\n        BULK 'rate_code.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '0x0b',\n        FIELDQUOTE = '0x0b',\n        ROWTERMINATOR = '0x0b'\n    )\n    WITH (\n        jsonDoc NVARCHAR(MAX)\n    ) AS rate_code\n    CROSS APPLY OPENJSON(jsonDoc)\n    WITH(\n        rate_code_id TINYINT,\n        rate_code VARCHAR(20)\n    );\n\nSELECT\n    rate_code_id , rate_code\nFROM\n    OPENROWSET(\n        BULK 'rate_code_multi_line.json',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        FIELDTERMINATOR = '0x0b',\n        FIELDQUOTE = '0x0b',\n        ROWTERMINATOR = '0x0b'\n    )\n    WITH (\n        jsonDoc NVARCHAR(MAX)\n    ) AS rate_code\n    CROSS APPLY OPENJSON(jsonDoc)\n    WITH(\n        rate_code_id TINYINT,\n        rate_code VARCHAR(20)\n    );",

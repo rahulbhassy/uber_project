@@ -2,7 +2,7 @@
 	"name": "Check_For_Duplicates",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "",

@@ -2,7 +2,7 @@
 	"name": "2_explore_calender",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "\nSELECT\n    *\nFROM\n    OPENROWSET(\n        BULK 'calendar.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        FIRSTROW = 2,\n        FIELDTERMINATOR = ',',\n        ROWTERMINATOR = '\\n'\n    )\n    WITH (\n        date_key       VARCHAR(8) 1,\n        [date]         DATE 2,\n        [year]         INT 3,\n        [month]        TINYINT 4,\n        [day]          TINYINT 5,\n        day_name       VARCHAR(20) 6,\n        day_of_year    SMALLINT 7,\n        week_of_month  TINYINT 8,\n        week_of_year   TINYINT 9,\n        month_name     VARCHAR(20) 10,\n        year_month     VARCHAR(6) 11,\n        year_week      VARCHAR(6) 12\n    ) AS result;\n\n",

@@ -2,7 +2,7 @@
 	"name": "7_explore_trip_data_green",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "USE nyc_taxi_discovery;\nSELECT\n    *\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/**',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS trip_data_green;\n\nSELECT\n    *\nFROM\n    OPENROWSET(\n        BULK ('trip_data_green_csv/year=2020/month=01/*.csv',\n        'trip_data_green_csv/year=2020/month=02/*.csv'),\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS trip_data_green;\n\n\nSELECT\n    trip_data_green.filename() AS file_name,\n    trip_data_green.filepath() AS file_path,\n    trip_data_green.filepath(1) AS year,\n    trip_data_green.filepath(2) AS month,\n    COUNT(1) AS record_count\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS trip_data_green\nGROUP BY trip_data_green.filename() , trip_data_green.filepath();\n\n\nSELECT\n    trip_data_green.filename() AS file_name,\n    trip_data_green.filepath() AS file_path,\n    trip_data_green.filepath(1) AS year,\n    trip_data_green.filepath(2) AS month\nFROM\n    OPENROWSET(\n        BULK 'trip_data_green_csv/year=*/month=*/*.csv',\n        DATA_SOURCE = 'nyc_taxi_data_raw',\n        FORMAT = 'CSV',\n        PARSER_VERSION = '2.0',\n        HEADER_ROW = TRUE\n    ) AS trip_data_green\nWHERE trip_data_green.filepath(1) = '2020'\nAND \n",

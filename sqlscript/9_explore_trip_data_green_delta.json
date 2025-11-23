@@ -2,7 +2,7 @@
 	"name": "9_explore_trip_data_green_delta",
 	"properties": {
 		"folder": {
-			"name": "nyc_taxi/discovery"
+			"name": "nyc_taxi_old/discovery"
 		},
 		"content": {
 			"query": "USE nyc_taxi_discovery;\n\nSELECT \n*\nFROM OPENROWSET(\n    BULK 'trip_data_green_delta/',\n    DATA_SOURCE = 'nyc_taxi_data_raw',\n    FORMAT = 'DELTA'\n) AS trip_data\n",

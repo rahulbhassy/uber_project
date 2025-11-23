@@ -1,0 +1,20 @@
+{
+	"name": "1_usp_silver_trip_data_green",
+	"properties": {
+		"folder": {
+			"name": "nyc_taxi/ldw/usp"
+		},
+		"content": {
+			"query": "USE nyc_taxi_ldw;\nGO\n\nCREATE OR ALTER PROCEDURE silver.usp_silver_trip_data_green\n    @year  VARCHAR(4),\n    @month VARCHAR(2)\nAS\nBEGIN\n\n    DECLARE @create_sql_stmt NVARCHAR(MAX),\n            @drop_sql_stmt   NVARCHAR(MAX),\n            @table_name      NVARCHAR(200);\n\n    SET @table_name = 'trip_data_green_' + @year + '_' + @month;\n\n    -- Create external table dynamically\n    SET @create_sql_stmt = '\n        CREATE EXTERNAL TABLE silver.' + @table_name + '\n        WITH\n        (\n            LOCATION = ''silver/trip_data_green/year=' + @year + '/month=' + @month + ''',\n            DATA_SOURCE = nyc_taxi_src,\n            FILE_FORMAT = parquet_file_format\n        )\n        AS\n        SELECT *\n        FROM bronze.vw_trip_data_green_csv\n        WHERE year = ''' + @year + '''\n        AND month = ''' + @month + ''';';\n\n    EXEC sp_executesql @create_sql_stmt;\n    \n    -- Drop external table if exists\n    SET @drop_sql_stmt =\n        'IF EXISTS (SELECT * FROM sys.external_tables WHERE name = ''' + @table_name + ''' AND schema_id = SCHEMA_ID(''silver''))\n            DROP EXTERNAL TABLE silver.' + @table_name + ';';\n\n    EXEC sp_executesql @drop_sql_stmt;\nEND;\nGO\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_ldw",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
