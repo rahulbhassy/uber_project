@@ -1,16 +1,16 @@
 {
-	"name": "SQL script 2",
+	"name": "5_usp_silver_trip_type",
 	"properties": {
 		"folder": {
 			"name": "nyc_taxi/ldw/usp"
 		},
 		"content": {
-			"query": "",
+			"query": "USE nyc_taxi_ldw;\nGO\n\nCREATE OR ALTER PROCEDURE silver.usp_silver_trip_type\nAS \nBEGIN\n    IF OBJECT_ID('silver.trip_type') IS NOT NULL\n        DROP EXTERNAL TABLE silver.trip_type;\n\n    CREATE EXTERNAL TABLE silver.trip_type\n    WITH (\n        DATA_SOURCE = nyc_taxi_src,\n        LOCATION = 'silver/trip_type',\n        FILE_FORMAT = parquet_file_format\n    )\n    AS \n    SELECT *\n    FROM bronze.trip_type;\n\nEND",
 			"metadata": {
 				"language": "sql"
 			},
 			"currentConnection": {
-				"databaseName": "master",
+				"databaseName": "nyc_taxi_ldw",
 				"poolName": "Built-in"
 			},
 			"resultLimit": 5000
