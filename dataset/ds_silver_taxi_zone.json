@@ -1,0 +1,20 @@
+{
+	"name": "ds_silver_taxi_zone",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "nycprojectdl_ls",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Parquet",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "silver/taxi_zone",
+				"fileSystem": "projectnycdl"
+			},
+			"compressionCodec": "snappy"
+		},
+		"schema": []
+	}
+}
