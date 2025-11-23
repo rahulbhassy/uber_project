@@ -1,0 +1,20 @@
+{
+	"name": "12_create_silver_trip_data_green",
+	"properties": {
+		"folder": {
+			"name": "nyc_taxi/ldw"
+		},
+		"content": {
+			"query": "USE nyc_taxi_ldw;\nDECLARE @sql NVARCHAR(MAX);\n\nSELECT @sql = STRING_AGG(\n        CAST('EXEC silver.usp_silver_trip_data_green ''' \n        + CAST(year AS VARCHAR(4)) + ''','''\n        + RIGHT('0' + CAST(month AS VARCHAR(2)), 2) + ''';' AS NVARCHAR(MAX)),\n        CHAR(10)\n    )\nFROM (\n        SELECT DISTINCT\n               CAST(year AS VARCHAR(4)) AS year,\n               RIGHT('0' + CAST(month AS VARCHAR(2)), 2) AS month\n        FROM bronze.vw_trip_data_green_csv\n     ) AS x;\n\nPRINT(@sql);\nEXEC(@sql);\n\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "nyc_taxi_ldw",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
